@@ -70,7 +70,7 @@ async function startServer() {
     saveData();
 
     const token = jwt.sign({ userId: id }, JWT_SECRET);
-    res.cookie("token", token, { httpOnly: true, sameSite: 'lax' });
+    res.cookie("token", token, { httpOnly: true, sameSite: 'none', secure: true });
     res.json({ user: { id, username, avatarColor }, token });
   });
 
@@ -84,7 +84,7 @@ async function startServer() {
     }
 
     const token = jwt.sign({ userId: user.id }, JWT_SECRET);
-    res.cookie("token", token, { httpOnly: true, sameSite: 'lax' });
+    res.cookie("token", token, { httpOnly: true, sameSite: 'none', secure: true });
     res.json({ user: { id: user.id, username: user.username, avatarColor: user.avatarColor }, token });
   });
 
