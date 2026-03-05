@@ -16,6 +16,7 @@ export interface DirectMessage {
   video?: string;
   maxViews?: number;
   viewCount?: number;
+  viewedBy?: Record<string, number>;
 }
 
 export interface WaitingUser {

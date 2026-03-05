@@ -19,7 +19,6 @@ export const activeChats = new Map<string, ChatSession>();
 export const socketToSession = new Map<string, string>();
 export const socketToUser = new Map<string, string>();
 export const userToSockets = new Map<string, Set<string>>();
-export const skippedPairs = new Map<string, number>();
 
 export const loadData = () => {
   try {

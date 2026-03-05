@@ -14,7 +14,7 @@ const JWT_SECRET = process.env.JWT_SECRET || "anon-chat-secret-key";
 import { UserRecord, DirectMessage, ChatSession, WaitingUser } from './server/types';
 import { 
   users, usernameToId, directMessages, waitingQueue, activeChats, 
-  socketToSession, socketToUser, userToSockets, skippedPairs, 
+  socketToSession, socketToUser, userToSockets, 
   loadData, saveData, replaceWaitingQueue 
 } from './server/state';
 
@@ -140,7 +140,15 @@ async function startServer() {
     }
 
     const chatId = getChatId(user.id, friendId);
-    res.json(directMessages.get(chatId) || []);
+    const messages = directMessages.get(chatId) || [];
+    
+    // Return messages with viewCount specific to the requesting user
+    const userMessages = messages.map(m => ({
+      ...m,
+      viewCount: m.viewedBy ? (m.viewedBy[user.id] || 0) : (m.viewCount || 0)
+    }));
+    
+    res.json(userMessages);
   });
 
   // waitingQueue and maps are imported from server/state
@@ -161,8 +169,6 @@ async function startServer() {
       }
     }
   };
-
-  const SKIP_COOLDOWN = 20 * 60 * 1000; // 20 minutes
 
   io.on("connection", (socket) => {
     const sessionId = socket.handshake.auth.sessionId;
@@ -228,14 +234,6 @@ async function startServer() {
     });
 
     socket.on("join-queue", () => {
-      // Clean up old skips occasionally
-      const now = Date.now();
-      if (Math.random() < 0.1) {
-        for (const [pair, expiry] of skippedPairs.entries()) {
-          if (now > expiry) skippedPairs.delete(pair);
-        }
-      }
-
       if (waitingQueue.some(u => u.socketId === socket.id) || activeChats.has(socket.id)) return;
 
       const userId = socketToUser.get(socket.id);
@@ -243,13 +241,8 @@ async function startServer() {
       // Find a compatible partner
       let partnerIndex = -1;
       for (let i = 0; i < waitingQueue.length; i++) {
-        const potentialPartner = waitingQueue[i];
-        const pairKey = [sessionId, potentialPartner.sessionId].sort().join(":");
-        
-        if (!skippedPairs.has(pairKey) || now > (skippedPairs.get(pairKey) || 0)) {
-          partnerIndex = i;
-          break;
-        }
+        partnerIndex = i;
+        break;
       }
 
       if (partnerIndex !== -1) {
@@ -456,7 +449,8 @@ async function startServer() {
         image,
         video,
         maxViews,
-        viewCount: 0
+        viewCount: 0,
+        viewedBy: {}
       };
 
       if (!directMessages.has(chatId)) {
@@ -543,6 +537,8 @@ async function startServer() {
           if (messages) {
             const msg = messages.find(m => m.id === messageId);
             if (msg) {
+              if (!msg.viewedBy) msg.viewedBy = {};
+              msg.viewedBy[myUserId] = (msg.viewedBy[myUserId] || 0) + 1;
               msg.viewCount = (msg.viewCount || 0) + 1;
               saveData();
               
@@ -572,11 +568,6 @@ async function startServer() {
     });
 
     socket.on("leave-chat", () => {
-      const chat = activeChats.get(socket.id);
-      if (chat) {
-        const pairKey = [sessionId, chat.partnerSessionId].sort().join(":");
-        skippedPairs.set(pairKey, Date.now() + SKIP_COOLDOWN);
-      }
       handleDisconnect(socket.id);
     });
 

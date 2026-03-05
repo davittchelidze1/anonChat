@@ -103,6 +103,9 @@ export default function App() {
     };
 
     const onPartnerMessageViewed = (messageId: string) => {
+      // We don't increment viewCount here anymore because we want independent view limits for each user.
+      // This event can be used for "Seen" status in the future.
+      /*
       setMessages((prev) => prev.map(m => {
         if (m.id === messageId) {
           const newCount = (m.viewCount || 0) + 1;
@@ -111,6 +114,7 @@ export default function App() {
         }
         return m;
       }));
+      */
     };
 
     const onPartnerTyping = (isTyping: boolean) => {
@@ -308,6 +312,11 @@ export default function App() {
       fetchFriends();
       if (state === 'direct-chat' && selectedFriend) {
         handleStartDirectChat(selectedFriend);
+      }
+      // Re-authenticate on reconnect
+      const token = document.cookie.split('; ').find(row => row.startsWith('token='))?.split('=')[1];
+      if (token) {
+        socket.emit('authenticate', token);
       }
     };
 
@@ -751,7 +760,7 @@ export default function App() {
         )}
 
         {state === 'waiting' && (
-          <WaitingView onStopChat={stopChat} />
+          <WaitingView onStopChat={stopChat} onlineCount={onlineCount} />
         )}
 
         {state === 'friends' && (
