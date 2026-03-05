@@ -309,6 +309,11 @@ export default function App() {
     };
 
     const onConnect = () => {
+      // Re-authenticate socket on reconnect using stored token
+      const storedToken = localStorage.getItem('anon_chat_token');
+      if (storedToken) {
+        socket.emit('authenticate', storedToken);
+      }
       fetchFriends();
       if (state === 'direct-chat' && selectedFriend) {
         handleStartDirectChat(selectedFriend);
@@ -734,6 +739,11 @@ export default function App() {
     setUser(null);
     setFriends([]);
     setRequests([]);
+    // Clear stored token
+    localStorage.removeItem('anon_chat_token');
+    if (socket) {
+      (socket.auth as any).token = undefined;
+    }
     // Emit authenticate with null to clear user on server without disconnecting
     socket?.emit('authenticate', null);
   };
@@ -741,6 +751,12 @@ export default function App() {
   const handleAuthSuccess = (userData: User, token: string) => {
     setUser(userData);
     fetchFriends();
+    // Store token for socket reconnection
+    localStorage.setItem('anon_chat_token', token);
+    // Update socket auth so reconnections use the new token
+    if (socket) {
+      (socket.auth as any).token = token;
+    }
     // Authenticate existing socket instead of disconnecting
     socket?.emit('authenticate', token);
   };

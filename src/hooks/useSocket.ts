@@ -12,10 +12,13 @@ export const useSocket = () => {
       localStorage.setItem('anon_chat_session_id', sessionId);
     }
 
-    // Initialize socket with session ID
+    const token = localStorage.getItem('anon_chat_token');
+
+    // Initialize socket with session ID and token for automatic auth on connect/reconnect
     const newSocket = io({
       auth: { 
-        sessionId
+        sessionId,
+        token: token || undefined
       },
       withCredentials: true
     });
