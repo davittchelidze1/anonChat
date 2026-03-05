@@ -153,11 +153,29 @@ async function startServer() {
 
   // waitingQueue and maps are imported from server/state
 
+  // Helper to notify friends about status change
+  const notifyFriendsStatus = (userId: string, isOnline: boolean) => {
+    const user = users.get(userId);
+    if (!user) return;
+    
+    user.friends.forEach(friendId => {
+      const friendSockets = userToSockets.get(friendId);
+      if (friendSockets) {
+        friendSockets.forEach(socketId => {
+          io.to(socketId).emit("friend-status", { userId, isOnline });
+        });
+      }
+    });
+  };
+
   const addUserSocket = (userId: string, socketId: string) => {
+    let isNew = false;
     if (!userToSockets.has(userId)) {
       userToSockets.set(userId, new Set());
+      isNew = true;
     }
     userToSockets.get(userId)!.add(socketId);
+    return isNew;
   };
 
   const removeUserSocket = (userId: string, socketId: string) => {
@@ -166,8 +184,10 @@ async function startServer() {
       sockets.delete(socketId);
       if (sockets.size === 0) {
         userToSockets.delete(userId);
+        return true;
       }
     }
+    return false;
   };
 
   io.on("connection", (socket) => {
@@ -180,12 +200,22 @@ async function startServer() {
     socketToSession.set(socket.id, sessionId);
     
     // Handle authenticated users connecting
-    const token = socket.handshake.auth.token;
+    let token = socket.handshake.auth.token;
+    
+    // If no token in auth payload, try to parse from cookie header
+    if (!token && socket.handshake.headers.cookie) {
+      const match = socket.handshake.headers.cookie.match(/(?:^|; )token=([^;]*)/);
+      if (match) {
+        token = match[1];
+      }
+    }
+
     if (token) {
       const user = getUserFromToken(token);
       if (user) {
         socketToUser.set(socket.id, user.id);
-        addUserSocket(user.id, socket.id);
+        const isNew = addUserSocket(user.id, socket.id);
+        if (isNew) notifyFriendsStatus(user.id, true);
         console.log("Authenticated user connected:", user.username, "Socket:", socket.id);
       }
     }
@@ -198,7 +228,8 @@ async function startServer() {
         const user = getUserFromToken(token);
         if (user) {
           socketToUser.set(socket.id, user.id);
-          addUserSocket(user.id, socket.id);
+          const isNew = addUserSocket(user.id, socket.id);
+          if (isNew) notifyFriendsStatus(user.id, true);
           
           // If in an active chat, update the partner's record of this user
           const myChat = activeChats.get(socket.id);
@@ -218,7 +249,8 @@ async function startServer() {
         // Logout case
         const userId = socketToUser.get(socket.id);
         if (userId) {
-          removeUserSocket(userId, socket.id);
+          const isOffline = removeUserSocket(userId, socket.id);
+          if (isOffline) notifyFriendsStatus(userId, false);
           socketToUser.delete(socket.id);
           
           const myChat = activeChats.get(socket.id);
@@ -574,7 +606,8 @@ async function startServer() {
     socket.on("disconnect", () => {
       const userId = socketToUser.get(socket.id);
       if (userId) {
-        removeUserSocket(userId, socket.id);
+        const isOffline = removeUserSocket(userId, socket.id);
+        if (isOffline) notifyFriendsStatus(userId, false);
         socketToUser.delete(socket.id);
       }
       handleDisconnect(socket.id);

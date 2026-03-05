@@ -15,9 +15,9 @@ export const useSocket = () => {
     // Initialize socket with session ID
     const newSocket = io({
       auth: { 
-        sessionId,
-        token: document.cookie.split('; ').find(row => row.startsWith('token='))?.split('=')[1]
-      }
+        sessionId
+      },
+      withCredentials: true
     });
 
     setSocket(newSocket);

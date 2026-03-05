@@ -313,14 +313,16 @@ export default function App() {
       if (state === 'direct-chat' && selectedFriend) {
         handleStartDirectChat(selectedFriend);
       }
-      // Re-authenticate on reconnect
-      const token = document.cookie.split('; ').find(row => row.startsWith('token='))?.split('=')[1];
-      if (token) {
-        socket.emit('authenticate', token);
-      }
+    };
+
+    const onFriendStatus = ({ userId, isOnline }: { userId: string, isOnline: boolean }) => {
+      setFriends(prev => prev.map(f => 
+        f.id === userId ? { ...f, isOnline } : f
+      ));
     };
 
     socket.on('connect', onConnect);
+    socket.on('friend-status', onFriendStatus);
     socket.on('waiting', onWaiting);
     socket.on('matched', onMatched);
     socket.on('receive-message', onReceiveMessage);
@@ -352,6 +354,7 @@ export default function App() {
 
     return () => {
       socket.off('connect', onConnect);
+      socket.off('friend-status', onFriendStatus);
       socket.off('waiting', onWaiting);
       socket.off('matched', onMatched);
       socket.off('receive-message', onReceiveMessage);
