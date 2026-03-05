@@ -1,0 +1,5 @@
+{
+  "name": "AnonChat",
+  "description": "A real-time anonymous random text chat application for making new friends.",
+  "requestFramePermissions": []
+}
