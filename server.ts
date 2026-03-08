@@ -13,7 +13,7 @@ const JWT_SECRET = process.env.JWT_SECRET || "anon-chat-secret-key";
 
 import { UserRecord, DirectMessage, ChatSession, WaitingUser } from './server/types';
 import { 
-  users, usernameToId, directMessages, waitingQueue, activeChats, 
+  users, usernameToId, deviceIdToUserId, directMessages, waitingQueue, activeChats, 
   socketToSession, socketToUser, userToSockets, 
   loadData, saveData, replaceWaitingQueue 
 } from './server/state';
@@ -46,6 +46,47 @@ async function startServer() {
   };
 
   // Auth Routes
+  app.post("/api/auth/device-login", async (req, res) => {
+    const { deviceId } = req.body;
+    if (!deviceId) return res.status(400).json({ error: "Missing deviceId" });
+
+    let userId = deviceIdToUserId.get(deviceId);
+    let user = userId ? users.get(userId) : null;
+
+    if (!user) {
+      // Create new anonymous user
+      const id = Math.random().toString(36).substring(2, 15);
+      // Generate a unique username
+      let username = `Anon-${Math.floor(Math.random() * 10000)}`;
+      while (usernameToId.has(username.toLowerCase())) {
+        username = `Anon-${Math.floor(Math.random() * 10000)}`;
+      }
+      
+      const colors = ['indigo', 'emerald', 'rose', 'amber', 'violet', 'cyan', 'fuchsia'];
+      const avatarColor = colors[Math.floor(Math.random() * colors.length)];
+
+      const newUser: UserRecord = {
+        id,
+        username,
+        passwordHash: "", // No password for anonymous users
+        avatarColor,
+        friends: [],
+        friendRequests: [],
+        deviceId
+      };
+
+      users.set(id, newUser);
+      usernameToId.set(username.toLowerCase(), id);
+      deviceIdToUserId.set(deviceId, id);
+      saveData();
+      user = newUser;
+    }
+
+    const token = jwt.sign({ userId: user.id }, JWT_SECRET);
+    res.cookie("token", token, { httpOnly: true, sameSite: 'none', secure: true });
+    res.json({ user: { id: user.id, username: user.username, avatarColor: user.avatarColor }, token });
+  });
+
   app.post("/api/auth/register", async (req, res) => {
     const { username, password } = req.body;
     if (!username || !password) return res.status(400).json({ error: "Missing fields" });
@@ -70,7 +111,7 @@ async function startServer() {
     saveData();
 
     const token = jwt.sign({ userId: id }, JWT_SECRET);
-    res.cookie("token", token, { httpOnly: true, sameSite: 'lax' });
+    res.cookie("token", token, { httpOnly: true, sameSite: 'none', secure: true });
     res.json({ user: { id, username, avatarColor }, token });
   });
 
@@ -84,7 +125,7 @@ async function startServer() {
     }
 
     const token = jwt.sign({ userId: user.id }, JWT_SECRET);
-    res.cookie("token", token, { httpOnly: true, sameSite: 'lax' });
+    res.cookie("token", token, { httpOnly: true, sameSite: 'none', secure: true });
     res.json({ user: { id: user.id, username: user.username, avatarColor: user.avatarColor }, token });
   });
 

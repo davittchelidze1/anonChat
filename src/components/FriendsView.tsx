@@ -85,7 +85,7 @@ export function FriendsView({ friends, requests, onBack, onAcceptRequest, onDecl
                         {friend.isOnline && <div className="w-2 h-2 rounded-full bg-emerald-500" />}
                       </div>
                       <p className="text-xs text-zinc-500 truncate">
-                        {friend.lastMessage || (friend.isOnline ? 'Active now' : 'Offline')}
+                        {friend.lastMessage || (friend.isOnline ? 'Online' : 'Offline')}
                       </p>
                     </div>
                   </div>

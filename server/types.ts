@@ -5,6 +5,7 @@ export interface UserRecord {
   avatarColor: string;
   friends: string[]; // Array of user IDs
   friendRequests: string[]; // Array of user IDs who sent requests
+  deviceId?: string; // Unique device identifier for anonymous login
 }
 
 export interface DirectMessage {

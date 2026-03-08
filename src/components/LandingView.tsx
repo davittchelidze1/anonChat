@@ -38,7 +38,7 @@ export function LandingView({
       <div className="absolute top-8 left-0 right-0 px-8 flex justify-between items-center w-full max-w-7xl mx-auto">
         <div className="flex items-center gap-2 text-zinc-500 text-xs sm:text-sm">
           <div className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
-          <span>{onlineCount > 0 ? `${onlineCount} online` : 'Real-time'}</span>
+          <span>{onlineCount > 0 ? `${onlineCount} online` : 'Online'}</span>
         </div>
         
         <div className="flex items-center gap-3">

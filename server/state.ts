@@ -6,6 +6,7 @@ const DATA_FILE = path.join(process.cwd(), "data.json");
 
 export const users = new Map<string, UserRecord>();
 export const usernameToId = new Map<string, string>();
+export const deviceIdToUserId = new Map<string, string>();
 export const directMessages = new Map<string, DirectMessage[]>();
 
 export const waitingQueue: WaitingUser[] = [];
@@ -28,7 +29,13 @@ export const loadData = () => {
       
       const data = JSON.parse(fileContent);
       if (data.users) {
-        Object.entries(data.users).forEach(([k, v]) => users.set(k, v as UserRecord));
+        Object.entries(data.users).forEach(([k, v]) => {
+          const user = v as UserRecord;
+          users.set(k, user);
+          if (user.deviceId) {
+            deviceIdToUserId.set(user.deviceId, user.id);
+          }
+        });
       }
       if (data.usernameToId) {
         Object.entries(data.usernameToId).forEach(([k, v]) => usernameToId.set(k, v as string));
