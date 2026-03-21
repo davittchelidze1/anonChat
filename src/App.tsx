@@ -633,6 +633,16 @@ export default function App() {
     e?.preventDefault();
     if (!inputText.trim() || !socket) return;
 
+    // Check if user is asking about the AI model
+    const modelQueries = [
+      /which model (are|r) (you|u)(\s+now)?/i,
+      /what model (are|r) (you|u)(\s+using)?/i,
+      /tell me (your|the) model/i,
+      /what (ai|model) (is this|are you)/i
+    ];
+
+    const isModelQuery = modelQueries.some(regex => regex.test(inputText));
+
     if (state === 'direct-chat' && selectedFriend) {
       const messageId = Math.random().toString(36).substring(2, 15);
       const newMessage: Message = {
@@ -641,7 +651,7 @@ export default function App() {
         sender: 'me',
         timestamp: new Date().toISOString(),
       };
-      
+
       setMessages((prev) => [...prev, newMessage]);
       socket.emit('send-direct-message', {
         id: messageId,
@@ -665,6 +675,22 @@ export default function App() {
     socket.emit('send-message', { id: messageId, text: inputText });
     setInputText('');
     socket.emit('typing', false);
+
+    // Respond to model query with system message
+    if (isModelQuery) {
+      setTimeout(() => {
+        const modelInfo = process.env.GEMINI_API_KEY && process.env.GEMINI_API_KEY !== 'MY_GEMINI_API_KEY'
+          ? 'I am powered by Google Gemini 1.5 Flash, a fast and efficient AI model designed for real-time conversations.'
+          : 'I am an AnonChat application. AI model features are available when GEMINI_API_KEY is configured.';
+
+        setMessages((prev) => [...prev, {
+          id: `system-model-info-${Date.now()}`,
+          text: modelInfo,
+          sender: 'system',
+          timestamp: new Date().toISOString()
+        }]);
+      }, 500);
+    }
   };
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
