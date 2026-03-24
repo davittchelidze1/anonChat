@@ -82,7 +82,7 @@ export function LandingView({
         AnonChat
       </h1>
       <p className="text-zinc-400 text-base sm:text-lg md:text-xl max-w-md mb-8 sm:mb-12">
-        Meet someone new. Chat anonymously. Make friends. No login required.
+        Chat instantly with strangers. No signup needed. Login only to save friends.
       </p>
       <div className="flex flex-col sm:flex-row items-center justify-center gap-3 sm:gap-4 mb-8 sm:mb-12 w-full max-w-xs sm:max-w-none">
         <button

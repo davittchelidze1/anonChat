@@ -799,13 +799,14 @@ export default function App() {
   const handleAddFriend = async () => {
     if (!user) {
       setIsAuthModalOpen(true);
+      setMessages((prev) => [...prev, { id: `system-auth-${Date.now()}`, text: 'Login to add friends and save conversations.', sender: 'system', timestamp: new Date().toISOString() }]);
       return;
     }
     if (!partnerUserId) {
       setMessages((prev) => [...prev, { id: `system-no-auth-${Date.now()}`, text: 'This stranger is not logged in and cannot be added as a friend.', sender: 'system', timestamp: new Date().toISOString() }]);
       return;
     }
-    
+
     if (requests.some(r => r.fromId === partnerUserId)) {
       handleAcceptFriendRequest(partnerUserId);
     } else {
@@ -858,6 +859,10 @@ export default function App() {
   };
 
   const handleAcceptFriendRequest = async (fromId: string) => {
+    if (!user) {
+      setMessages((prev) => [...prev, { id: `system-auth-${Date.now()}`, text: 'Login to accept friend requests.', sender: 'system', timestamp: new Date().toISOString() }]);
+      return;
+    }
     try {
       const headers = await getAuthHeader();
       const response = await fetch('/api/friends/accept', {
@@ -873,7 +878,7 @@ export default function App() {
         const payload = await response.json().catch(() => ({ error: 'accept_failed' }));
         throw new Error(payload.error || 'accept_failed');
       }
-      
+
       fetchFriends();
       socket?.emit('friend-request-accepted', fromId);
     } catch (err) {
@@ -882,6 +887,10 @@ export default function App() {
   };
 
   const handleDeclineFriendRequest = async (fromId: string) => {
+    if (!user) {
+      setMessages((prev) => [...prev, { id: `system-auth-${Date.now()}`, text: 'Login to manage friend requests.', sender: 'system', timestamp: new Date().toISOString() }]);
+      return;
+    }
     try {
       const headers = await getAuthHeader();
       const response = await fetch('/api/friends/decline', {
@@ -897,7 +906,7 @@ export default function App() {
         const payload = await response.json().catch(() => ({ error: 'decline_failed' }));
         throw new Error(payload.error || 'decline_failed');
       }
-      
+
       fetchFriends();
     } catch (err) {
       console.error("Failed to decline friend request", err);
@@ -914,8 +923,9 @@ export default function App() {
     setUser(null);
     setFriends([]);
     setRequests([]);
-    // Clear stored token
+    // Clear stored token and anonymous disabled flag to return to guest mode
     localStorage.removeItem('anon_chat_token');
+    localStorage.removeItem('anon_chat_anonymous_disabled');
     if (socket && socket.auth) {
       (socket.auth as { token?: string }).token = undefined;
     }
@@ -1006,6 +1016,7 @@ export default function App() {
             onReaction={handleReaction}
             onDoodleDraw={handleDoodleDraw}
             onDoodleClear={handleDoodleClear}
+            onOpenAuth={() => setIsAuthModalOpen(true)}
             fileInputRef={fileInputRef}
             videoInputRef={videoInputRef}
             messagesEndRef={messagesEndRef}

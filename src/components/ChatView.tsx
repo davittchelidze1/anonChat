@@ -1,6 +1,6 @@
 import React, { useState, useRef } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
-import { Send, User, LogOut, SkipForward, Image as ImageIcon, Video, Trophy, Gamepad2, UserPlus, Palette, ArrowLeft, Smile } from 'lucide-react';
+import { Send, User, LogOut, SkipForward, Image as ImageIcon, Video, Trophy, Gamepad2, UserPlus, Palette, ArrowLeft, Smile, LogIn } from 'lucide-react';
 import EmojiPicker, { EmojiClickData, Theme } from 'emoji-picker-react';
 import { Message, GameState, GameType, User as UserType, Friend, FriendRequest } from '../types';
 import { cn } from '../lib/utils';
@@ -39,6 +39,7 @@ interface ChatViewProps {
   onDoodleDraw: (stroke: { x: number; y: number; color: string; isStart: boolean }) => void;
   onDoodleClear: () => void;
   isDirectChat?: boolean;
+  onOpenAuth?: () => void;
   fileInputRef: React.RefObject<HTMLInputElement>;
   videoInputRef: React.RefObject<HTMLInputElement>;
   messagesEndRef: React.RefObject<HTMLDivElement>;
@@ -77,6 +78,7 @@ export function ChatView({
   onDoodleDraw,
   onDoodleClear,
   isDirectChat = false,
+  onOpenAuth,
   fileInputRef,
   videoInputRef,
   messagesEndRef
@@ -191,6 +193,15 @@ export function ChatView({
           </div>
         </div>
         <div className="flex items-center gap-2 sm:gap-3">
+          {!isDirectChat && !user && onOpenAuth && (
+            <button
+              onClick={onOpenAuth}
+              className="flex items-center gap-1.5 sm:gap-2 px-2.5 sm:px-3 py-1.5 sm:py-2 bg-indigo-600/10 hover:bg-indigo-600/20 rounded-xl transition-all text-[10px] sm:text-xs font-bold uppercase tracking-widest text-indigo-400 border border-indigo-500/20 cursor-pointer"
+            >
+              <LogIn className="w-3.5 h-3.5 sm:w-4 h-4" />
+              <span className="hidden xs:inline">Login</span>
+            </button>
+          )}
           {!isDirectChat && (!partnerUserId || !friends.some(f => f.id === partnerUserId)) && (
             <button
               onClick={onAddFriend}
