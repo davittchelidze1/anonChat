@@ -85,10 +85,10 @@ export function AuthModal({ isOpen, onClose, onSuccess }: AuthModalProps) {
                 <User className="w-8 h-8 text-indigo-400" />
               </div>
               <h3 className="text-2xl font-bold tracking-tight mb-2">
-                Welcome
+                Sign In to Add Friends
               </h3>
               <p className="text-zinc-500 text-sm">
-                Login with Google to save your friends and messages
+                Keep chatting as a guest, or login with Google to save friends and conversations
               </p>
             </div>
 
