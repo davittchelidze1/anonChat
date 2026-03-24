@@ -53,13 +53,9 @@ service cloud.firestore {
       // Users can create their own profile
       allow create: if isOwner(userId) && isValidUser(request.resource.data) && request.resource.data.id == userId;
       
-      // Users can update their own profile.
-      // Other users can update friendRequests (to send a request) or friends (when accepting a request)
-      allow update: if isAuthenticated() && isValidUser(request.resource.data) && request.resource.data.id == resource.data.id &&
-                    (
-                      isOwner(userId) || 
-                      (!request.resource.data.diff(resource.data).affectedKeys().hasAny(['id', 'username', 'avatarColor', 'deviceId', 'createdAt']))
-                    );
+      // Users can update only their own profile from the client.
+      // Cross-user relationship writes must be done by trusted backend logic.
+      allow update: if isOwner(userId) && isValidUser(request.resource.data) && request.resource.data.id == resource.data.id;
     }
 
     match /directMessages/{chatId}/messages/{messageId} {

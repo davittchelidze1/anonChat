@@ -787,6 +787,15 @@ export default function App() {
     setSelectedFriend(null);
   };
 
+  const getAuthHeader = async () => {
+    const { auth } = await import('./firebase');
+    const token = await auth.currentUser?.getIdToken();
+    if (!token) {
+      throw new Error('unauthorized');
+    }
+    return { Authorization: `Bearer ${token}` };
+  };
+
   const handleAddFriend = async () => {
     if (!user) {
       setIsAuthModalOpen(true);
@@ -801,15 +810,33 @@ export default function App() {
       handleAcceptFriendRequest(partnerUserId);
     } else {
       try {
-        const { db, auth } = await import('./firebase');
-        const { doc, updateDoc, arrayUnion } = await import('firebase/firestore');
-        if (!auth.currentUser) return;
-        
-        const partnerRef = doc(db, 'users', partnerUserId);
-        await updateDoc(partnerRef, {
-          friendRequests: arrayUnion(auth.currentUser.uid)
+        const headers = await getAuthHeader();
+        const response = await fetch('/api/friends/request', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            ...headers,
+          },
+          body: JSON.stringify({ toUserId: partnerUserId }),
         });
-        
+
+        if (!response.ok) {
+          const payload = await response.json().catch(() => ({ error: 'request_failed' }));
+          if (payload.error === 'quota_exceeded') {
+            setMessages((prev) => [...prev, { id: `system-limit-${Date.now()}`, text: 'Rate limit reached: max 20 friend requests per hour.', sender: 'system', timestamp: new Date().toISOString() }]);
+            return;
+          }
+          if (payload.error === 'already_friends') {
+            setMessages((prev) => [...prev, { id: `system-fr-already-${Date.now()}`, text: 'You are already friends with this user.', sender: 'system', timestamp: new Date().toISOString() }]);
+            return;
+          }
+          if (payload.error === 'request_already_sent') {
+            setMessages((prev) => [...prev, { id: `system-fr-already-sent-${Date.now()}`, text: 'You have already sent a friend request to this user.', sender: 'system', timestamp: new Date().toISOString() }]);
+            return;
+          }
+          throw new Error(payload.error || 'request_failed');
+        }
+
         setMessages((prev) => [...prev, { id: `system-req-${Date.now()}`, text: 'Friend request sent.', sender: 'system', timestamp: new Date().toISOString() }]);
         socket?.emit('friend-request-sent', partnerUserId);
       } catch (err) {
@@ -832,21 +859,20 @@ export default function App() {
 
   const handleAcceptFriendRequest = async (fromId: string) => {
     try {
-      const { db, auth } = await import('./firebase');
-      const { doc, updateDoc, arrayUnion, arrayRemove } = await import('firebase/firestore');
-      if (!auth.currentUser) return;
-      
-      const myRef = doc(db, 'users', auth.currentUser.uid);
-      const partnerRef = doc(db, 'users', fromId);
-      
-      await updateDoc(myRef, {
-        friends: arrayUnion(fromId),
-        friendRequests: arrayRemove(fromId)
+      const headers = await getAuthHeader();
+      const response = await fetch('/api/friends/accept', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          ...headers,
+        },
+        body: JSON.stringify({ fromUserId: fromId }),
       });
-      
-      await updateDoc(partnerRef, {
-        friends: arrayUnion(auth.currentUser.uid)
-      });
+
+      if (!response.ok) {
+        const payload = await response.json().catch(() => ({ error: 'accept_failed' }));
+        throw new Error(payload.error || 'accept_failed');
+      }
       
       fetchFriends();
       socket?.emit('friend-request-accepted', fromId);
@@ -857,14 +883,20 @@ export default function App() {
 
   const handleDeclineFriendRequest = async (fromId: string) => {
     try {
-      const { db, auth } = await import('./firebase');
-      const { doc, updateDoc, arrayRemove } = await import('firebase/firestore');
-      if (!auth.currentUser) return;
-      
-      const myRef = doc(db, 'users', auth.currentUser.uid);
-      await updateDoc(myRef, {
-        friendRequests: arrayRemove(fromId)
+      const headers = await getAuthHeader();
+      const response = await fetch('/api/friends/decline', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          ...headers,
+        },
+        body: JSON.stringify({ fromUserId: fromId }),
       });
+
+      if (!response.ok) {
+        const payload = await response.json().catch(() => ({ error: 'decline_failed' }));
+        throw new Error(payload.error || 'decline_failed');
+      }
       
       fetchFriends();
     } catch (err) {
@@ -894,6 +926,7 @@ export default function App() {
   const handleAuthSuccess = (userData: User, token: string) => {
     setUser(userData);
     fetchFriends();
+    localStorage.setItem('anon_chat_anonymous_disabled', '1');
     // Store token for socket reconnection
     localStorage.setItem('anon_chat_token', token);
     // Update socket auth so reconnections use the new token

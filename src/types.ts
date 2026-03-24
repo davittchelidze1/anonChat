@@ -17,6 +17,12 @@ export type User = {
   id: string;
   username: string;
   avatarColor: string;
+  friends?: string[];
+  friendRequests?: string[];
+  deviceId?: string;
+  createdAt?: string;
+  authType?: 'anonymous' | 'registered';
+  anonymousDisabled?: boolean;
 };
 
 export type Friend = {
@@ -31,7 +37,7 @@ export type Friend = {
 export type FriendRequest = {
   fromId: string;
   fromUsername: string;
-  toId: string;
+  toId?: string;
 };
 
 export type GameType = 'tictactoe' | 'rps' | 'doodle';

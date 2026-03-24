@@ -9,6 +9,16 @@ export const useAuth = () => {
   const [user, setUser] = useState<User | null>(null);
   const [isAuthReady, setIsAuthReady] = useState(false);
 
+  const fetchUser = async () => {
+    if (!auth.currentUser) return null;
+    const userDocRef = doc(db, 'users', auth.currentUser.uid);
+    const userDoc = await getDoc(userDocRef);
+    if (!userDoc.exists()) return null;
+    const nextUser = userDoc.data() as User;
+    setUser(nextUser);
+    return nextUser;
+  };
+
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, async (firebaseUser) => {
       if (firebaseUser) {
@@ -49,6 +59,11 @@ export const useAuth = () => {
         return () => unsubSnapshot();
       } else {
         setUser(null);
+        const anonymousDisabled = localStorage.getItem('anon_chat_anonymous_disabled') === '1';
+        if (anonymousDisabled) {
+          setIsAuthReady(true);
+          return;
+        }
         // Try anonymous login
         try {
           await signInAnonymously(auth);
@@ -87,5 +102,5 @@ export const useAuth = () => {
     return () => unsubscribe();
   }, []);
 
-  return { user, isAuthReady, setUser };
+  return { user, isAuthReady, setUser, fetchUser };
 };

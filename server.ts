@@ -8,6 +8,7 @@ import { Filter } from "bad-words";
 import bcrypt from "bcryptjs";
 import jwt from "jsonwebtoken";
 import cookieParser from "cookie-parser";
+import admin from "firebase-admin";
 
 const JWT_SECRET = process.env.JWT_SECRET || "anon-chat-secret-key";
 
@@ -29,6 +30,34 @@ async function startServer() {
   });
 
   const filter = new Filter();
+
+  const serviceAccountJson = process.env.FIREBASE_SERVICE_ACCOUNT_JSON;
+  const serviceAccountFile = process.env.FIREBASE_SERVICE_ACCOUNT_FILE;
+  const firebaseAdminReady = (() => {
+    try {
+      if (!admin.apps.length) {
+        if (serviceAccountJson) {
+          const parsed = JSON.parse(serviceAccountJson);
+          admin.initializeApp({
+            credential: admin.credential.cert(parsed),
+          });
+        } else if (serviceAccountFile) {
+          const raw = fs.readFileSync(path.resolve(process.cwd(), serviceAccountFile), "utf8");
+          const parsed = JSON.parse(raw);
+          admin.initializeApp({
+            credential: admin.credential.cert(parsed),
+          });
+        } else {
+          admin.initializeApp();
+        }
+      }
+      return true;
+    } catch (error) {
+      console.error("Firebase Admin initialization failed:", error);
+      return false;
+    }
+  })();
+  const firestore = firebaseAdminReady ? admin.firestore() : null;
   
   loadData();
 
@@ -36,30 +65,237 @@ async function startServer() {
   const getChatId = (id1: string, id2: string) => [id1, id2].sort().join("_");
 
   // Helper to get user from token
-  const getUserFromToken = (token: string): any | null => {
+  const getUserFromToken = async (token: string): Promise<any | null> => {
     try {
-      // Decode the Firebase ID token (we skip signature verification for this prototype
-      // since we don't have the Firebase Admin SDK service account)
-      const decoded = jwt.decode(token) as any;
-      if (decoded && decoded.user_id) {
+      if (firebaseAdminReady) {
+        const decoded = await admin.auth().verifyIdToken(token);
         // We don't have the full user object in memory anymore since we moved to Firestore.
         // But for socket presence, we just need the ID.
         // We'll return a mock user object with the ID.
+        return {
+          id: decoded.uid,
+          username: decoded.name || 'User',
+          avatarColor: 'zinc'
+        };
+      }
+
+      // Fallback for local/dev environments where Admin SDK is not configured.
+      const decoded = jwt.decode(token) as any;
+      if (decoded && decoded.user_id) {
         return {
           id: decoded.user_id,
           username: decoded.name || 'User',
           avatarColor: 'zinc'
         };
       }
+
       return null;
     } catch (e) {
       return null;
     }
   };
 
+  const getAuthToken = (req: express.Request): string | null => {
+    const authHeader = req.headers.authorization;
+    if (authHeader && authHeader.startsWith("Bearer ")) {
+      return authHeader.slice(7);
+    }
+
+    const cookieToken = req.cookies?.token;
+    if (typeof cookieToken === "string" && cookieToken.length > 0) {
+      return cookieToken;
+    }
+
+    return null;
+  };
+
   // API routes
   app.get("/api/health", (req, res) => {
     res.json({ status: "ok" });
+  });
+
+  app.post("/api/friends/request", async (req, res) => {
+    if (!firestore) {
+      res.status(503).json({ error: "server_not_configured" });
+      return;
+    }
+
+    const token = getAuthToken(req);
+    if (!token) {
+      res.status(401).json({ error: "unauthorized" });
+      return;
+    }
+
+    const authUser = await getUserFromToken(token);
+    if (!authUser) {
+      res.status(401).json({ error: "unauthorized" });
+      return;
+    }
+
+    const toUserId = String(req.body?.toUserId || "").trim();
+    if (!toUserId) {
+      res.status(400).json({ error: "invalid_target" });
+      return;
+    }
+    if (toUserId === authUser.id) {
+      res.status(400).json({ error: "cannot_add_self" });
+      return;
+    }
+
+    try {
+      const now = Date.now();
+      const windowMs = 60 * 60 * 1000;
+      const maxRequests = 20;
+
+      await firestore.runTransaction(async (tx) => {
+        const fromRef = firestore.collection("users").doc(authUser.id);
+        const toRef = firestore.collection("users").doc(toUserId);
+        const quotaRef = firestore.collection("friendRequestRate").doc(authUser.id);
+
+        const [fromSnap, toSnap, quotaSnap] = await Promise.all([
+          tx.get(fromRef),
+          tx.get(toRef),
+          tx.get(quotaRef),
+        ]);
+
+        if (!fromSnap.exists || !toSnap.exists) {
+          throw new Error("invalid_target");
+        }
+
+        const fromData = fromSnap.data() as any;
+        const toData = toSnap.data() as any;
+        const fromFriends: string[] = Array.isArray(fromData?.friends) ? fromData.friends : [];
+        const toRequests: string[] = Array.isArray(toData?.friendRequests) ? toData.friendRequests : [];
+
+        if (fromFriends.includes(toUserId)) {
+          throw new Error("already_friends");
+        }
+        if (toRequests.includes(authUser.id)) {
+          throw new Error("request_already_sent");
+        }
+
+        const quotaData = quotaSnap.exists ? (quotaSnap.data() as any) : {};
+        const windowStart = typeof quotaData.windowStart === "number" ? quotaData.windowStart : now;
+        const inWindow = now - windowStart < windowMs;
+        const currentCount = inWindow && typeof quotaData.count === "number" ? quotaData.count : 0;
+
+        if (currentCount >= maxRequests) {
+          throw new Error("quota_exceeded");
+        }
+
+        tx.set(
+          quotaRef,
+          {
+            windowStart: inWindow ? windowStart : now,
+            count: currentCount + 1,
+            updatedAt: now,
+          },
+          { merge: true }
+        );
+
+        tx.update(toRef, {
+          friendRequests: admin.firestore.FieldValue.arrayUnion(authUser.id),
+        });
+      });
+
+      res.json({ ok: true });
+    } catch (error: any) {
+      const code = error?.message || "request_failed";
+      const status = code === "quota_exceeded" ? 429 : 400;
+      res.status(status).json({ error: code });
+    }
+  });
+
+  app.post("/api/friends/accept", async (req, res) => {
+    if (!firestore) {
+      res.status(503).json({ error: "server_not_configured" });
+      return;
+    }
+
+    const token = getAuthToken(req);
+    if (!token) {
+      res.status(401).json({ error: "unauthorized" });
+      return;
+    }
+
+    const authUser = await getUserFromToken(token);
+    if (!authUser) {
+      res.status(401).json({ error: "unauthorized" });
+      return;
+    }
+
+    const fromUserId = String(req.body?.fromUserId || "").trim();
+    if (!fromUserId) {
+      res.status(400).json({ error: "invalid_source" });
+      return;
+    }
+
+    try {
+      await firestore.runTransaction(async (tx) => {
+        const myRef = firestore.collection("users").doc(authUser.id);
+        const fromRef = firestore.collection("users").doc(fromUserId);
+
+        const [mySnap, fromSnap] = await Promise.all([tx.get(myRef), tx.get(fromRef)]);
+        if (!mySnap.exists || !fromSnap.exists) {
+          throw new Error("invalid_source");
+        }
+
+        const myData = mySnap.data() as any;
+        const myRequests: string[] = Array.isArray(myData?.friendRequests) ? myData.friendRequests : [];
+        if (!myRequests.includes(fromUserId)) {
+          throw new Error("request_not_found");
+        }
+
+        tx.update(myRef, {
+          friends: admin.firestore.FieldValue.arrayUnion(fromUserId),
+          friendRequests: admin.firestore.FieldValue.arrayRemove(fromUserId),
+        });
+
+        tx.update(fromRef, {
+          friends: admin.firestore.FieldValue.arrayUnion(authUser.id),
+        });
+      });
+
+      res.json({ ok: true });
+    } catch (error: any) {
+      res.status(400).json({ error: error?.message || "accept_failed" });
+    }
+  });
+
+  app.post("/api/friends/decline", async (req, res) => {
+    if (!firestore) {
+      res.status(503).json({ error: "server_not_configured" });
+      return;
+    }
+
+    const token = getAuthToken(req);
+    if (!token) {
+      res.status(401).json({ error: "unauthorized" });
+      return;
+    }
+
+    const authUser = await getUserFromToken(token);
+    if (!authUser) {
+      res.status(401).json({ error: "unauthorized" });
+      return;
+    }
+
+    const fromUserId = String(req.body?.fromUserId || "").trim();
+    if (!fromUserId) {
+      res.status(400).json({ error: "invalid_source" });
+      return;
+    }
+
+    try {
+      const myRef = firestore.collection("users").doc(authUser.id);
+      await myRef.update({
+        friendRequests: admin.firestore.FieldValue.arrayRemove(fromUserId),
+      });
+
+      res.json({ ok: true });
+    } catch (error: any) {
+      res.status(400).json({ error: error?.message || "decline_failed" });
+    }
   });
 
   // waitingQueue and maps are imported from server/state
@@ -122,21 +358,23 @@ async function startServer() {
     }
 
     if (token) {
-      const user = getUserFromToken(token);
-      if (user) {
-        socketToUser.set(socket.id, user.id);
-        const isNew = addUserSocket(user.id, socket.id);
-        if (isNew) notifyFriendsStatus(user.id, true);
-        console.log("Authenticated user connected:", user.username, "Socket:", socket.id);
-      }
+      (async () => {
+        const user = await getUserFromToken(token);
+        if (user) {
+          socketToUser.set(socket.id, user.id);
+          const isNew = addUserSocket(user.id, socket.id);
+          if (isNew) notifyFriendsStatus(user.id, true);
+          console.log("Authenticated user connected:", user.username, "Socket:", socket.id);
+        }
+      })();
     }
 
     console.log("User connected:", socket.id, "Session:", sessionId);
     io.emit("online-count", io.engine.clientsCount);
 
-    socket.on("authenticate", (token) => {
+    socket.on("authenticate", async (token) => {
       if (token) {
-        const user = getUserFromToken(token);
+        const user = await getUserFromToken(token);
         if (user) {
           socketToUser.set(socket.id, user.id);
           const isNew = addUserSocket(user.id, socket.id);
