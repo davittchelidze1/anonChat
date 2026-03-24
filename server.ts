@@ -36,160 +36,30 @@ async function startServer() {
   const getChatId = (id1: string, id2: string) => [id1, id2].sort().join("_");
 
   // Helper to get user from token
-  const getUserFromToken = (token: string): UserRecord | null => {
+  const getUserFromToken = (token: string): any | null => {
     try {
-      const decoded = jwt.verify(token, JWT_SECRET) as { userId: string };
-      return users.get(decoded.userId) || null;
+      // Decode the Firebase ID token (we skip signature verification for this prototype
+      // since we don't have the Firebase Admin SDK service account)
+      const decoded = jwt.decode(token) as any;
+      if (decoded && decoded.user_id) {
+        // We don't have the full user object in memory anymore since we moved to Firestore.
+        // But for socket presence, we just need the ID.
+        // We'll return a mock user object with the ID.
+        return {
+          id: decoded.user_id,
+          username: decoded.name || 'User',
+          avatarColor: 'zinc'
+        };
+      }
+      return null;
     } catch (e) {
       return null;
     }
   };
 
-  // Auth Routes
-  app.post("/api/auth/device-login", async (req, res) => {
-    const { deviceId } = req.body;
-    if (!deviceId) return res.status(400).json({ error: "Missing deviceId" });
-
-    let userId = deviceIdToUserId.get(deviceId);
-    let user = userId ? users.get(userId) : null;
-
-    if (!user) {
-      // Create new anonymous user
-      const id = Math.random().toString(36).substring(2, 15);
-      // Generate a unique username
-      let username = `Anon-${Math.floor(Math.random() * 10000)}`;
-      while (usernameToId.has(username.toLowerCase())) {
-        username = `Anon-${Math.floor(Math.random() * 10000)}`;
-      }
-      
-      const colors = ['indigo', 'emerald', 'rose', 'amber', 'violet', 'cyan', 'fuchsia'];
-      const avatarColor = colors[Math.floor(Math.random() * colors.length)];
-
-      const newUser: UserRecord = {
-        id,
-        username,
-        passwordHash: "", // No password for anonymous users
-        avatarColor,
-        friends: [],
-        friendRequests: [],
-        deviceId
-      };
-
-      users.set(id, newUser);
-      usernameToId.set(username.toLowerCase(), id);
-      deviceIdToUserId.set(deviceId, id);
-      saveData();
-      user = newUser;
-    }
-
-    const token = jwt.sign({ userId: user.id }, JWT_SECRET);
-    res.cookie("token", token, { httpOnly: true, sameSite: 'none', secure: true });
-    res.json({ user: { id: user.id, username: user.username, avatarColor: user.avatarColor }, token });
-  });
-
-  app.post("/api/auth/register", async (req, res) => {
-    const { username, password } = req.body;
-    if (!username || !password) return res.status(400).json({ error: "Missing fields" });
-    if (usernameToId.has(username.toLowerCase())) return res.status(400).json({ error: "Username taken" });
-
-    const id = Math.random().toString(36).substring(2, 15);
-    const passwordHash = await bcrypt.hash(password, 10);
-    const colors = ['indigo', 'emerald', 'rose', 'amber', 'violet', 'cyan', 'fuchsia'];
-    const avatarColor = colors[Math.floor(Math.random() * colors.length)];
-
-    const newUser: UserRecord = {
-      id,
-      username,
-      passwordHash,
-      avatarColor,
-      friends: [],
-      friendRequests: []
-    };
-
-    users.set(id, newUser);
-    usernameToId.set(username.toLowerCase(), id);
-    saveData();
-
-    const token = jwt.sign({ userId: id }, JWT_SECRET);
-    res.cookie("token", token, { httpOnly: true, sameSite: 'none', secure: true });
-    res.json({ user: { id, username, avatarColor }, token });
-  });
-
-  app.post("/api/auth/login", async (req, res) => {
-    const { username, password } = req.body;
-    const userId = usernameToId.get(username.toLowerCase());
-    const user = userId ? users.get(userId) : null;
-
-    if (!user || !(await bcrypt.compare(password, user.passwordHash))) {
-      return res.status(401).json({ error: "Invalid credentials" });
-    }
-
-    const token = jwt.sign({ userId: user.id }, JWT_SECRET);
-    res.cookie("token", token, { httpOnly: true, sameSite: 'none', secure: true });
-    res.json({ user: { id: user.id, username: user.username, avatarColor: user.avatarColor }, token });
-  });
-
-  app.get("/api/auth/me", (req, res) => {
-    const user = getUserFromToken(req.cookies.token);
-    if (!user) return res.status(401).json({ error: "Not logged in" });
-    res.json({ user: { id: user.id, username: user.username, avatarColor: user.avatarColor } });
-  });
-
-  app.post("/api/auth/logout", (req, res) => {
-    res.clearCookie("token");
-    res.json({ success: true });
-  });
-
-  app.get("/api/friends", (req, res) => {
-    const user = getUserFromToken(req.cookies.token);
-    if (!user) return res.status(401).json({ error: "Not logged in" });
-    
-    const friendsList = (user.friends || []).map(fId => {
-      const f = users.get(fId);
-      const chatId = getChatId(user.id, fId);
-      const msgs = directMessages.get(chatId) || [];
-      const lastMsg = msgs.length > 0 ? msgs[msgs.length - 1] : null;
-
-      return {
-        id: fId,
-        username: f?.username || "Unknown",
-        avatarColor: f?.avatarColor || "zinc",
-        isOnline: userToSockets.has(fId),
-        lastMessage: lastMsg ? (lastMsg.text || (lastMsg.image ? "Sent an image" : "Sent a video")) : undefined,
-        lastMessageAt: lastMsg ? lastMsg.timestamp : undefined
-      };
-    });
-    
-    const requests = (user.friendRequests || []).map(fId => {
-      const f = users.get(fId);
-      return {
-        fromId: fId,
-        fromUsername: f?.username || "Unknown"
-      };
-    });
-
-    res.json({ friends: friendsList, requests });
-  });
-
-  app.get("/api/messages/:friendId", (req, res) => {
-    const user = getUserFromToken(req.cookies.token);
-    if (!user) return res.status(401).json({ error: "Not logged in" });
-    
-    const friendId = req.params.friendId;
-    if (!user.friends || !user.friends.includes(friendId)) {
-      return res.status(403).json({ error: "Not friends" });
-    }
-
-    const chatId = getChatId(user.id, friendId);
-    const messages = directMessages.get(chatId) || [];
-    
-    // Return messages with viewCount specific to the requesting user
-    const userMessages = messages.map(m => ({
-      ...m,
-      viewCount: m.viewedBy ? (m.viewedBy[user.id] || 0) : (m.viewCount || 0)
-    }));
-    
-    res.json(userMessages);
+  // API routes
+  app.get("/api/health", (req, res) => {
+    res.json({ status: "ok" });
   });
 
   // waitingQueue and maps are imported from server/state
@@ -343,95 +213,35 @@ async function startServer() {
       }
     });
 
-    socket.on("send-friend-request", () => {
-      const chat = activeChats.get(socket.id);
+    socket.on("friend-request-sent", (partnerUserId) => {
       const myUserId = socketToUser.get(socket.id);
+      if (!myUserId) return;
       
-      if (!myUserId) {
-        socket.emit("auth-required-for-friend");
-        return;
-      }
-
-      if (chat && chat.partnerUserId) {
-        if (chat.partnerUserId === myUserId) {
-          socket.emit("cannot-add-self");
-          return;
-        }
-        const partner = users.get(chat.partnerUserId);
-        const me = users.get(myUserId);
-        if (partner && me) {
-          if (partner.friends.includes(myUserId)) {
-            socket.emit("already-friends");
-            return;
-          }
-          if (partner.friendRequests.includes(myUserId)) {
-            socket.emit("request-already-sent");
-            return;
-          }
-          if (me.friendRequests.includes(partner.id)) {
-            // They already sent us a request, just accept it
-            me.friendRequests = me.friendRequests.filter(id => id !== partner.id);
-            if (!me.friends.includes(partner.id)) me.friends.push(partner.id);
-            if (!partner.friends.includes(myUserId)) partner.friends.push(myUserId);
-            saveData();
-            
-            socket.emit("friend-request-accepted", partner.id);
-            const partnerSockets = userToSockets.get(partner.id);
-            if (partnerSockets) {
-              partnerSockets.forEach(sId => {
-                io.to(sId).emit("friend-request-accepted", myUserId);
-              });
-            }
-            return;
-          }
-          partner.friendRequests.push(myUserId);
-          saveData();
-          const partnerSockets = userToSockets.get(partner.id);
-          if (partnerSockets) {
-            partnerSockets.forEach(sId => {
-              io.to(sId).emit("new-friend-request", { fromId: me.id, fromUsername: me.username });
-            });
-          }
-            socket.emit("friend-request-sent");
-        }
-      } else if (chat && !chat.partnerUserId) {
-        socket.emit("partner-not-logged-in");
+      const partnerSockets = userToSockets.get(partnerUserId);
+      if (partnerSockets) {
+        partnerSockets.forEach(sId => {
+          io.to(sId).emit("new-friend-request", { fromId: myUserId });
+        });
       }
     });
 
-    socket.on("accept-friend-request", (fromId) => {
+    socket.on("friend-request-accepted", (fromId) => {
       const myUserId = socketToUser.get(socket.id);
       if (!myUserId) return;
 
-      const me = users.get(myUserId);
-      const fromUser = users.get(fromId);
-
-      if (me && fromUser && me.friendRequests.includes(fromId)) {
-        me.friendRequests = me.friendRequests.filter(id => id !== fromId);
-        if (!me.friends.includes(fromId)) me.friends.push(fromId);
-        if (!fromUser.friends.includes(myUserId)) fromUser.friends.push(myUserId);
-        saveData();
-
-        socket.emit("friend-request-accepted", fromId);
-        const fromSockets = userToSockets.get(fromId);
-        if (fromSockets) {
-          fromSockets.forEach(sId => {
-            io.to(sId).emit("friend-request-accepted", myUserId);
-          });
-        }
+      const fromSockets = userToSockets.get(fromId);
+      if (fromSockets) {
+        fromSockets.forEach(sId => {
+          io.to(sId).emit("friend-request-accepted", myUserId);
+        });
       }
     });
 
     socket.on("decline-friend-request", (fromId) => {
+      // Just for completeness, though the client handles it via Firestore
       const myUserId = socketToUser.get(socket.id);
       if (!myUserId) return;
-
-      const me = users.get(myUserId);
-      if (me && me.friendRequests.includes(fromId)) {
-        me.friendRequests = me.friendRequests.filter(id => id !== fromId);
-        saveData();
-        socket.emit("friend-request-declined", fromId);
-      }
+      socket.emit("friend-request-declined", fromId);
     });
 
     socket.on("request-media-permission", () => {
@@ -494,67 +304,7 @@ async function startServer() {
       }
     });
 
-    socket.on("send-direct-message", (payload) => {
-      const userId = socketToUser.get(socket.id);
-      if (!userId) return;
-
-      const { toId, text, image, video, id, maxViews } = payload;
-      const user = users.get(userId);
-      if (!user || !user.friends || !user.friends.includes(toId)) {
-        console.log("Direct message failed: Not friends or user not found", userId, toId);
-        return;
-      }
-
-      const chatId = getChatId(userId, toId);
-      const messageId = id || Math.random().toString(36).substring(2, 15);
-      const timestamp = new Date().toISOString();
-
-      let cleanText = text;
-      try {
-        if (text) cleanText = filter.clean(text);
-      } catch (e) {}
-
-      const msg: DirectMessage = {
-        id: messageId,
-        senderId: userId,
-        text: cleanText,
-        timestamp,
-        image,
-        video,
-        maxViews,
-        viewCount: 0,
-        viewedBy: {}
-      };
-
-      if (!directMessages.has(chatId)) {
-        directMessages.set(chatId, []);
-      }
-      directMessages.get(chatId)!.push(msg);
-      saveData();
-
-      // Send to recipient (all their sockets)
-      const recipientSockets = userToSockets.get(toId);
-      if (recipientSockets) {
-        recipientSockets.forEach(sId => {
-          io.to(sId).emit("receive-direct-message", {
-            ...msg,
-            sender: 'partner'
-          });
-        });
-      }
-      
-      // Send confirmation to all of sender's sockets (sync across tabs)
-      const senderSockets = userToSockets.get(userId);
-      if (senderSockets) {
-        senderSockets.forEach(sId => {
-          io.to(sId).emit("direct-message-sent", {
-            ...msg,
-            toId,
-            sender: 'me'
-          });
-        });
-      }
-    });
+    // Direct messages are now handled by Firestore directly in the client
 
     socket.on("send-message", (payload) => {
       const chat = activeChats.get(socket.id);
@@ -668,12 +418,19 @@ async function startServer() {
   });
 
   // Vite integration
-  const vite = await createViteServer({
-    server: { middlewareMode: true },
-    appType: "spa",
-  });
-
-  app.use(vite.middlewares);
+  if (process.env.NODE_ENV !== "production") {
+    const vite = await createViteServer({
+      server: { middlewareMode: true },
+      appType: "spa",
+    });
+    app.use(vite.middlewares);
+  } else {
+    const distPath = path.join(process.cwd(), 'dist');
+    app.use(express.static(distPath));
+    app.get('*', (req, res) => {
+      res.sendFile(path.join(distPath, 'index.html'));
+    });
+  }
 
   const PORT = 3000;
   httpServer.listen(PORT, "0.0.0.0", () => {

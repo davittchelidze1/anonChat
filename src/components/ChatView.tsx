@@ -29,7 +29,7 @@ interface ChatViewProps {
   onStopChat: () => void;
   onImageClick: (src: string, id?: string) => void;
   onGameInvite: (type: GameType) => void;
-  onGameMove: (move: any) => void;
+  onGameMove: (move: number | string) => void;
   onGameCancel: () => void;
   onGameAccept: (type: GameType) => void;
   onAddFriend: () => void;
@@ -87,7 +87,7 @@ export function ChatView({
     ? friends.find(f => f.id === partnerUserId)?.isOnline 
     : true; // Anonymous partners are always "online" while matched
   const [activeReactionId, setActiveReactionId] = useState<string | null>(null);
-  const longPressTimer = useRef<any>(null);
+  const longPressTimer = useRef<NodeJS.Timeout | null>(null);
 
   const emojis = ['❤️', '😂', '👍', '😮', '🔥', '🙏'];
 

@@ -159,13 +159,13 @@ export default function App() {
       });
     };
 
-    const onGamePartnerMove = (move: any) => {
+    const onGamePartnerMove = (move: number | string) => {
       setGameState((prev) => {
         if (!prev) return null;
         
         if (prev.type === 'tictactoe') {
           const newBoard = [...(prev.board || [])];
-          newBoard[move] = 'O';
+          newBoard[move as number] = 'O';
           
           const winner = checkTicTacToeWinner(newBoard);
           if (winner) {
@@ -175,10 +175,10 @@ export default function App() {
           return { ...prev, board: newBoard, turn: 'me' };
         } else if (prev.type === 'rps') {
           if (prev.myMove) {
-            const winner = checkRPSWinner(prev.myMove, move);
-            return { ...prev, partnerMove: move, status: 'ended', winner };
+            const winner = checkRPSWinner(prev.myMove, move as string);
+            return { ...prev, partnerMove: move as string, status: 'ended', winner };
           }
-          return { ...prev, partnerMove: move };
+          return { ...prev, partnerMove: move as string };
         }
         return prev;
       });
@@ -272,7 +272,7 @@ export default function App() {
       }));
     };
 
-    const onReceiveDirectMessage = (msg: any) => {
+    const onReceiveDirectMessage = (msg: Message & { senderId: string }) => {
       if (state === 'direct-chat' && selectedFriend?.id === msg.senderId) {
         setMessages((prev) => {
           if (prev.some(m => m.id === msg.id)) return prev;
@@ -293,7 +293,7 @@ export default function App() {
       }
     };
 
-    const onDirectMessageSent = (msg: any) => {
+    const onDirectMessageSent = (msg: Message & { toId: string }) => {
       if (state === 'direct-chat' && selectedFriend?.id === msg.toId) {
         setMessages((prev) => {
           // Avoid duplicate messages if we already added it optimistically
@@ -458,14 +458,14 @@ export default function App() {
     setGameState(null);
   };
 
-  const handleGameMove = (move: any) => {
+  const handleGameMove = (move: number | string) => {
     if (!gameState || gameState.status !== 'playing') return;
     
     if (gameState.type === 'tictactoe') {
-      if (gameState.turn !== 'me' || gameState.board?.[move] !== null) return;
+      if (gameState.turn !== 'me' || gameState.board?.[move as number] !== null) return;
       
       const newBoard = [...(gameState.board || [])];
-      newBoard[move] = 'X';
+      newBoard[move as number] = 'X';
       socket?.emit('game-move', move);
       
       const winner = checkTicTacToeWinner(newBoard);
@@ -479,10 +479,10 @@ export default function App() {
       socket?.emit('game-move', move);
       
       if (gameState.partnerMove) {
-        const winner = checkRPSWinner(move, gameState.partnerMove);
-        setGameState({ ...gameState, myMove: move, status: 'ended', winner });
+        const winner = checkRPSWinner(move as string, gameState.partnerMove);
+        setGameState({ ...gameState, myMove: move as string, status: 'ended', winner });
       } else {
-        setGameState({ ...gameState, myMove: move });
+        setGameState({ ...gameState, myMove: move as string });
       }
     }
   };
@@ -496,14 +496,42 @@ export default function App() {
     socket?.emit('join-queue');
   };
 
-  const handleMessageView = (messageId: string) => {
+  const handleMessageView = async (messageId: string) => {
+    if (state === 'direct-chat' && selectedFriend && user) {
+      try {
+        const { auth, db } = await import('./firebase');
+        const { doc, getDoc, updateDoc } = await import('firebase/firestore');
+        
+        if (!auth.currentUser) return;
+        
+        const chatId = [auth.currentUser.uid, selectedFriend.id].sort().join('_');
+        const messageRef = doc(db, 'directMessages', chatId, 'messages', messageId);
+        
+        const msgDoc = await getDoc(messageRef);
+        if (msgDoc.exists()) {
+          const data = msgDoc.data();
+          const currentViewedBy = data.viewedBy || {};
+          const myViews = currentViewedBy[auth.currentUser.uid] || 0;
+          
+          if (data.maxViews && myViews < data.maxViews) {
+            await updateDoc(messageRef, {
+              [`viewedBy.${auth.currentUser.uid}`]: myViews + 1,
+              viewCount: (data.viewCount || 0) + 1
+            });
+          }
+        }
+      } catch (err) {
+        console.error("Failed to update message view", err);
+      }
+      return;
+    }
+
     setMessages((prev) => prev.map(m => {
       if (m.id === messageId) {
         const newCount = (m.viewCount || 0) + 1;
         const isViewed = m.maxViews ? newCount >= m.maxViews : false;
         if (!m.isViewed) {
-          const partnerId = state === 'direct-chat' ? selectedFriend?.id : null;
-          socket?.emit('message-viewed', { messageId, partnerId });
+          socket?.emit('message-viewed', { messageId, partnerId: null });
         }
         return { ...m, viewCount: newCount, isViewed };
       }
@@ -514,29 +542,51 @@ export default function App() {
   const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (file && socket) {
-      if (file.size > 5 * 1024 * 1024) { // 5MB limit
-        alert('File too large (max 5MB)');
+      if (file.size > 800 * 1024) { // 800KB limit for Firestore document size
+        alert('File too large (max 800KB)');
         return;
       }
       
       const reader = new FileReader();
-      reader.onload = (ev) => {
+      reader.onload = async (ev) => {
         const base64 = ev.target?.result as string;
         const messageId = Math.random().toString(36).substring(2, 15);
-        const newMessage: Message = {
-          id: messageId,
-          text: '',
-          image: base64,
-          sender: 'me',
-          timestamp: new Date().toISOString(),
-          maxViews: 2,
-          viewCount: 0
-        };
-
-        setMessages((prev) => [...prev, newMessage]);
-        if (state === 'direct-chat' && selectedFriend) {
-          socket?.emit('send-direct-message', { id: messageId, text: '', image: base64, toId: selectedFriend.id, maxViews: 2 });
+        const timestamp = new Date().toISOString();
+        
+        if (state === 'direct-chat' && selectedFriend && user) {
+          try {
+            const { auth, db } = await import('./firebase');
+            const { doc, setDoc } = await import('firebase/firestore');
+            
+            if (!auth.currentUser) return;
+            
+            const chatId = [auth.currentUser.uid, selectedFriend.id].sort().join('_');
+            const messageRef = doc(db, 'directMessages', chatId, 'messages', messageId);
+            
+            await setDoc(messageRef, {
+              id: messageId,
+              senderId: auth.currentUser.uid,
+              text: '',
+              image: base64,
+              timestamp,
+              maxViews: 2,
+              viewCount: 0,
+              viewedBy: {}
+            });
+          } catch (err) {
+            console.error("Failed to send image", err);
+          }
         } else {
+          const newMessage: Message = {
+            id: messageId,
+            text: '',
+            image: base64,
+            sender: 'me',
+            timestamp,
+            maxViews: 2,
+            viewCount: 0
+          };
+          setMessages((prev) => [...prev, newMessage]);
           socket?.emit('send-message', { id: messageId, text: '', image: base64, maxViews: 2 });
         }
       };
@@ -550,8 +600,8 @@ export default function App() {
     const file = e.target.files?.[0];
     if (!file || !socket) return;
 
-    if (file.size > 15 * 1024 * 1024) {
-      alert('Video too large (max 15MB)');
+    if (file.size > 800 * 1024) { // 800KB limit for Firestore document size
+      alert('Video too large (max 800KB)');
       if (videoInputRef.current) videoInputRef.current.value = '';
       return;
     }
@@ -567,23 +617,45 @@ export default function App() {
       }
       
       const reader = new FileReader();
-      reader.onload = (ev) => {
+      reader.onload = async (ev) => {
         const base64 = ev.target?.result as string;
         const messageId = Math.random().toString(36).substring(2, 15);
-        const newMessage: Message = {
-          id: messageId,
-          text: '',
-          video: base64,
-          sender: 'me',
-          timestamp: new Date().toISOString(),
-          maxViews: 2,
-          viewCount: 0
-        };
+        const timestamp = new Date().toISOString();
 
-        setMessages((prev) => [...prev, newMessage]);
-        if (state === 'direct-chat' && selectedFriend) {
-          socket?.emit('send-direct-message', { id: messageId, text: '', video: base64, toId: selectedFriend.id, maxViews: 2 });
+        if (state === 'direct-chat' && selectedFriend && user) {
+          try {
+            const { auth, db } = await import('./firebase');
+            const { doc, setDoc } = await import('firebase/firestore');
+            
+            if (!auth.currentUser) return;
+            
+            const chatId = [auth.currentUser.uid, selectedFriend.id].sort().join('_');
+            const messageRef = doc(db, 'directMessages', chatId, 'messages', messageId);
+            
+            await setDoc(messageRef, {
+              id: messageId,
+              senderId: auth.currentUser.uid,
+              text: '',
+              video: base64,
+              timestamp,
+              maxViews: 2,
+              viewCount: 0,
+              viewedBy: {}
+            });
+          } catch (err) {
+            console.error("Failed to send video", err);
+          }
         } else {
+          const newMessage: Message = {
+            id: messageId,
+            text: '',
+            video: base64,
+            sender: 'me',
+            timestamp,
+            maxViews: 2,
+            viewCount: 0
+          };
+          setMessages((prev) => [...prev, newMessage]);
           socket?.emit('send-message', { id: messageId, text: '', video: base64, maxViews: 2 });
         }
       };
@@ -602,64 +674,72 @@ export default function App() {
       setMessages([]);
     }
     setState('direct-chat');
-    const currentFriendId = friend.id;
+    
     try {
-      const res = await fetch(`/api/messages/${friend.id}`);
-      if (res.ok) {
-        const data = await res.json();
-        // Only update if we are still chatting with the same friend
-        setSelectedFriend(prev => {
-          if (prev?.id === currentFriendId) {
-            const history = data.map((m: any) => ({
-              ...m,
-              sender: m.senderId === user?.id ? 'me' : 'partner',
-              isViewed: m.maxViews ? (m.viewCount || 0) >= m.maxViews : false
-            }));
-            
-            setMessages(prevMsgs => {
-              // If it's the same friend, we merge history with current messages
-              // If it's a new friend, prevMsgs will be empty anyway
-              const newOptimistic = prevMsgs.filter(m => !history.some((h: any) => h.id === m.id));
-              return [...history, ...newOptimistic];
-            });
-          }
-          return prev;
+      const { auth, db } = await import('./firebase');
+      const { collection, query, orderBy, onSnapshot } = await import('firebase/firestore');
+      
+      if (!auth.currentUser || !user) return;
+      
+      const chatId = [auth.currentUser.uid, friend.id].sort().join('_');
+      const messagesRef = collection(db, 'directMessages', chatId, 'messages');
+      const q = query(messagesRef, orderBy('timestamp', 'asc'));
+      
+      const unsubscribe = onSnapshot(q, (snapshot) => {
+        const history = snapshot.docs.map(doc => {
+          const m = doc.data() as Message & { senderId: string };
+          return {
+            ...m,
+            sender: m.senderId === user.id ? 'me' : 'partner',
+            isViewed: m.maxViews ? (m.viewCount || 0) >= m.maxViews : false
+          };
         });
+        
+        setMessages(history);
+      });
+      
+      if ((window as any).currentChatUnsubscribe) {
+        (window as any).currentChatUnsubscribe();
       }
-    } catch (e) {}
+      (window as any).currentChatUnsubscribe = unsubscribe;
+      
+    } catch (e) {
+      console.error("Failed to load messages", e);
+    }
   };
 
-  const sendMessage = (e?: React.FormEvent) => {
+  const sendMessage = async (e?: React.FormEvent) => {
     e?.preventDefault();
     if (!inputText.trim() || !socket) return;
 
-    // Check if user is asking about the AI model
-    const modelQueries = [
-      /which model (are|r) (you|u)(\s+now)?/i,
-      /what model (are|r) (you|u)(\s+using)?/i,
-      /tell me (your|the) model/i,
-      /what (ai|model) (is this|are you)/i
-    ];
-
-    const isModelQuery = modelQueries.some(regex => regex.test(inputText));
-
-    if (state === 'direct-chat' && selectedFriend) {
+    if (state === 'direct-chat' && selectedFriend && user) {
       const messageId = Math.random().toString(36).substring(2, 15);
-      const newMessage: Message = {
-        id: messageId,
-        text: inputText,
-        sender: 'me',
-        timestamp: new Date().toISOString(),
-      };
-
-      setMessages((prev) => [...prev, newMessage]);
-      socket.emit('send-direct-message', {
-        id: messageId,
-        toId: selectedFriend.id,
-        text: inputText
-      });
+      const timestamp = new Date().toISOString();
+      const text = inputText;
+      
       setInputText('');
       socket.emit('typing', false);
+      
+      try {
+        const { auth, db } = await import('./firebase');
+        const { doc, setDoc } = await import('firebase/firestore');
+        
+        if (!auth.currentUser) return;
+        
+        const chatId = [auth.currentUser.uid, selectedFriend.id].sort().join('_');
+        const messageRef = doc(db, 'directMessages', chatId, 'messages', messageId);
+        
+        await setDoc(messageRef, {
+          id: messageId,
+          senderId: auth.currentUser.uid,
+          text,
+          timestamp,
+          viewCount: 0,
+          viewedBy: {}
+        });
+      } catch (err) {
+        console.error("Failed to send message", err);
+      }
       return;
     }
 
@@ -675,22 +755,6 @@ export default function App() {
     socket.emit('send-message', { id: messageId, text: inputText });
     setInputText('');
     socket.emit('typing', false);
-
-    // Respond to model query with system message
-    if (isModelQuery) {
-      setTimeout(() => {
-        const modelInfo = process.env.GEMINI_API_KEY && process.env.GEMINI_API_KEY !== 'MY_GEMINI_API_KEY'
-          ? 'I am powered by Google Gemini 1.5 Flash, a fast and efficient AI model designed for real-time conversations.'
-          : 'I am an AnonChat application. AI model features are available when GEMINI_API_KEY is configured.';
-
-        setMessages((prev) => [...prev, {
-          id: `system-model-info-${Date.now()}`,
-          text: modelInfo,
-          sender: 'system',
-          timestamp: new Date().toISOString()
-        }]);
-      }, 500);
-    }
   };
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -723,7 +787,7 @@ export default function App() {
     setSelectedFriend(null);
   };
 
-  const handleAddFriend = () => {
+  const handleAddFriend = async () => {
     if (!user) {
       setIsAuthModalOpen(true);
       return;
@@ -736,7 +800,21 @@ export default function App() {
     if (requests.some(r => r.fromId === partnerUserId)) {
       handleAcceptFriendRequest(partnerUserId);
     } else {
-      socket?.emit('send-friend-request');
+      try {
+        const { db, auth } = await import('./firebase');
+        const { doc, updateDoc, arrayUnion } = await import('firebase/firestore');
+        if (!auth.currentUser) return;
+        
+        const partnerRef = doc(db, 'users', partnerUserId);
+        await updateDoc(partnerRef, {
+          friendRequests: arrayUnion(auth.currentUser.uid)
+        });
+        
+        setMessages((prev) => [...prev, { id: `system-req-${Date.now()}`, text: 'Friend request sent.', sender: 'system', timestamp: new Date().toISOString() }]);
+        socket?.emit('friend-request-sent', partnerUserId);
+      } catch (err) {
+        console.error("Failed to send friend request", err);
+      }
     }
   };
 
@@ -752,23 +830,62 @@ export default function App() {
     socket?.emit('message-reaction', { messageId, emoji });
   };
 
-  const handleAcceptFriendRequest = (fromId: string) => {
-    socket?.emit('accept-friend-request', fromId);
+  const handleAcceptFriendRequest = async (fromId: string) => {
+    try {
+      const { db, auth } = await import('./firebase');
+      const { doc, updateDoc, arrayUnion, arrayRemove } = await import('firebase/firestore');
+      if (!auth.currentUser) return;
+      
+      const myRef = doc(db, 'users', auth.currentUser.uid);
+      const partnerRef = doc(db, 'users', fromId);
+      
+      await updateDoc(myRef, {
+        friends: arrayUnion(fromId),
+        friendRequests: arrayRemove(fromId)
+      });
+      
+      await updateDoc(partnerRef, {
+        friends: arrayUnion(auth.currentUser.uid)
+      });
+      
+      fetchFriends();
+      socket?.emit('friend-request-accepted', fromId);
+    } catch (err) {
+      console.error("Failed to accept friend request", err);
+    }
   };
 
-  const handleDeclineFriendRequest = (fromId: string) => {
-    socket?.emit('decline-friend-request', fromId);
+  const handleDeclineFriendRequest = async (fromId: string) => {
+    try {
+      const { db, auth } = await import('./firebase');
+      const { doc, updateDoc, arrayRemove } = await import('firebase/firestore');
+      if (!auth.currentUser) return;
+      
+      const myRef = doc(db, 'users', auth.currentUser.uid);
+      await updateDoc(myRef, {
+        friendRequests: arrayRemove(fromId)
+      });
+      
+      fetchFriends();
+    } catch (err) {
+      console.error("Failed to decline friend request", err);
+    }
   };
 
   const handleLogout = async () => {
-    await fetch('/api/auth/logout', { method: 'POST' });
+    try {
+      const { auth } = await import('./firebase');
+      await auth.signOut();
+    } catch (e) {
+      console.error("Logout error", e);
+    }
     setUser(null);
     setFriends([]);
     setRequests([]);
     // Clear stored token
     localStorage.removeItem('anon_chat_token');
-    if (socket) {
-      (socket.auth as any).token = undefined;
+    if (socket && socket.auth) {
+      (socket.auth as { token?: string }).token = undefined;
     }
     // Emit authenticate with null to clear user on server without disconnecting
     socket?.emit('authenticate', null);
@@ -780,8 +897,8 @@ export default function App() {
     // Store token for socket reconnection
     localStorage.setItem('anon_chat_token', token);
     // Update socket auth so reconnections use the new token
-    if (socket) {
-      (socket.auth as any).token = token;
+    if (socket && socket.auth) {
+      (socket.auth as { token?: string }).token = token;
     }
     // Authenticate existing socket instead of disconnecting
     socket?.emit('authenticate', token);

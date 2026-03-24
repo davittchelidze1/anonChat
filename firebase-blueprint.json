@@ -1,0 +1,46 @@
+{
+  "entities": {
+    "User": {
+      "title": "User",
+      "description": "A user profile",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string", "description": "User ID matching auth UID" },
+        "username": { "type": "string", "description": "Unique username" },
+        "avatarColor": { "type": "string", "description": "Color for avatar" },
+        "friends": { "type": "array", "items": { "type": "string" }, "description": "List of friend user IDs" },
+        "friendRequests": { "type": "array", "items": { "type": "string" }, "description": "List of user IDs who sent requests" },
+        "deviceId": { "type": "string", "description": "Device ID for anonymous login" },
+        "createdAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["id", "username", "avatarColor", "friends", "friendRequests", "createdAt"]
+    },
+    "DirectMessage": {
+      "title": "DirectMessage",
+      "description": "A direct message between two users",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "senderId": { "type": "string" },
+        "text": { "type": "string" },
+        "timestamp": { "type": "string", "format": "date-time" },
+        "image": { "type": "string" },
+        "video": { "type": "string" },
+        "maxViews": { "type": "number" },
+        "viewCount": { "type": "number" },
+        "viewedBy": { "type": "object", "additionalProperties": { "type": "number" } }
+      },
+      "required": ["id", "senderId", "text", "timestamp"]
+    }
+  },
+  "firestore": {
+    "/users/{userId}": {
+      "schema": { "$ref": "#/entities/User" },
+      "description": "User profiles"
+    },
+    "/directMessages/{chatId}/messages/{messageId}": {
+      "schema": { "$ref": "#/entities/DirectMessage" },
+      "description": "Direct messages between users"
+    }
+  }
+}

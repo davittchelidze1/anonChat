@@ -1,0 +1,88 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    // ===============================================================
+    // Helper Functions
+    // ===============================================================
+    function isAuthenticated() {
+      return request.auth != null;
+    }
+    
+    function isOwner(userId) {
+      return isAuthenticated() && request.auth.uid == userId;
+    }
+    
+    function hasOnlyAllowedFields(fields) {
+      return request.resource.data.keys().hasOnly(fields);
+    }
+    
+    function hasRequiredFields(fields) {
+      return request.resource.data.keys().hasAll(fields);
+    }
+
+    function isValidUser(data) {
+      return hasOnlyAllowedFields(['id', 'username', 'avatarColor', 'friends', 'friendRequests', 'deviceId', 'createdAt']) &&
+             hasRequiredFields(['id', 'username', 'avatarColor', 'friends', 'friendRequests', 'createdAt']) &&
+             data.id is string && data.id.size() > 0 && data.id.size() < 100 &&
+             data.username is string && data.username.size() > 0 && data.username.size() < 50 &&
+             data.avatarColor is string && data.avatarColor.size() > 0 && data.avatarColor.size() < 20 &&
+             data.friends is list && data.friends.size() <= 1000 &&
+             data.friendRequests is list && data.friendRequests.size() <= 1000 &&
+             (!('deviceId' in data) || (data.deviceId is string && data.deviceId.size() < 100)) &&
+             data.createdAt is string;
+    }
+
+    function isValidMessage(data) {
+      return hasOnlyAllowedFields(['id', 'senderId', 'text', 'timestamp', 'image', 'video', 'maxViews', 'viewCount', 'viewedBy']) &&
+             hasRequiredFields(['id', 'senderId', 'text', 'timestamp']) &&
+             data.id is string && data.id.size() > 0 && data.id.size() < 100 &&
+             data.senderId is string && data.senderId.size() > 0 && data.senderId.size() < 100 &&
+             data.text is string && data.text.size() <= 5000 &&
+             data.timestamp is string &&
+             (!('image' in data) || (data.image is string && data.image.size() <= 1048576)) &&
+             (!('video' in data) || (data.video is string && data.video.size() <= 1048576)) &&
+             (!('maxViews' in data) || (data.maxViews is number && data.maxViews >= 0)) &&
+             (!('viewCount' in data) || (data.viewCount is number && data.viewCount >= 0)) &&
+             (!('viewedBy' in data) || (data.viewedBy is map && data.viewedBy.size() <= 100));
+    }
+
+    match /users/{userId} {
+      // Anyone authenticated can read user profiles
+      allow read: if isAuthenticated();
+      
+      // Users can create their own profile
+      allow create: if isOwner(userId) && isValidUser(request.resource.data) && request.resource.data.id == userId;
+      
+      // Users can update their own profile.
+      // Other users can update friendRequests (to send a request) or friends (when accepting a request)
+      allow update: if isAuthenticated() && isValidUser(request.resource.data) && request.resource.data.id == resource.data.id &&
+                    (
+                      isOwner(userId) || 
+                      (!request.resource.data.diff(resource.data).affectedKeys().hasAny(['id', 'username', 'avatarColor', 'deviceId', 'createdAt']))
+                    );
+    }
+
+    match /directMessages/{chatId}/messages/{messageId} {
+      // Users can read messages if they are part of the chat
+      allow read: if isAuthenticated() && (chatId.matches('.*' + request.auth.uid + '.*'));
+      
+      // Users can create messages if they are the sender and part of the chat
+      allow create: if isAuthenticated() && 
+                    (chatId.matches('.*' + request.auth.uid + '.*')) &&
+                    request.resource.data.senderId == request.auth.uid &&
+                    isValidMessage(request.resource.data);
+                    
+      // Users can update messages (e.g., to increment viewCount) if they are part of the chat
+      allow update: if isAuthenticated() && 
+                    (chatId.matches('.*' + request.auth.uid + '.*')) &&
+                    isValidMessage(request.resource.data) &&
+                    request.resource.data.id == resource.data.id &&
+                    request.resource.data.senderId == resource.data.senderId &&
+                    request.resource.data.text == resource.data.text &&
+                    request.resource.data.timestamp == resource.data.timestamp &&
+                    (!('image' in request.resource.data) || request.resource.data.image == resource.data.image) &&
+                    (!('video' in request.resource.data) || request.resource.data.video == resource.data.video) &&
+                    (!('maxViews' in request.resource.data) || request.resource.data.maxViews == resource.data.maxViews);
+    }
+  }
+}

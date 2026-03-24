@@ -6,7 +6,7 @@ import { cn } from '../lib/utils';
 
 interface MiniGamesProps {
   gameState: GameState | null;
-  onMove: (move: any) => void;
+  onMove: (move: number | string) => void;
   onCancel: () => void;
   onAccept: (type: GameType) => void;
   onInvite: (type: GameType) => void;
