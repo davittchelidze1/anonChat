@@ -11,66 +11,83 @@ export const useFriends = () => {
   const fetchFriends = useCallback(async () => {
     try {
       if (!auth.currentUser) return;
-      
+
       const userDocRef = doc(db, 'users', auth.currentUser.uid);
       const userDoc = await getDoc(userDocRef);
-      
+
       if (!userDoc.exists()) return;
       const userData = userDoc.data() as User;
-      
-      const friendsList: Friend[] = [];
-      const requestsList: FriendRequest[] = [];
-      
-      // Fetch friends
-      for (const friendId of (userData.friends || [])) {
-        const friendDoc = await getDoc(doc(db, 'users', friendId));
-        if (friendDoc.exists()) {
+
+      const friendIds = userData.friends || [];
+      const requestIds = userData.friendRequests || [];
+
+      // Batch fetch friend user data
+      const friendDocs = await Promise.all(
+        friendIds.map(friendId => getDoc(doc(db, 'users', friendId)))
+      );
+
+      // Batch fetch last messages for all friends
+      const lastMessagePromises = friendIds.map(async (friendId) => {
+        const chatId = [auth.currentUser!.uid, friendId].sort().join('_');
+        const messagesRef = collection(db, 'directMessages', chatId, 'messages');
+        const q = query(messagesRef, orderBy('timestamp', 'desc'), limit(1));
+        const messagesSnap = await getDocs(q);
+
+        if (!messagesSnap.empty) {
+          const lastMsg = messagesSnap.docs[0].data();
+          return {
+            text: lastMsg.text || (lastMsg.image ? "Sent an image" : "Sent a video"),
+            timestamp: lastMsg.timestamp
+          };
+        }
+        return null;
+      });
+
+      const lastMessages = await Promise.all(lastMessagePromises);
+
+      // Construct friends list with all data
+      const friendsList: Friend[] = friendDocs
+        .map((friendDoc, index) => {
+          if (!friendDoc.exists()) return null;
+
           const friendData = friendDoc.data() as User;
-          
-          // Get last message
-          const chatId = [auth.currentUser.uid, friendId].sort().join('_');
-          const messagesRef = collection(db, 'directMessages', chatId, 'messages');
-          const q = query(messagesRef, orderBy('timestamp', 'desc'), limit(1));
-          const messagesSnap = await getDocs(q);
-          
-          let lastMessageText;
-          let lastMessageAt;
-          
-          if (!messagesSnap.empty) {
-            const lastMsg = messagesSnap.docs[0].data();
-            lastMessageText = lastMsg.text || (lastMsg.image ? "Sent an image" : "Sent a video");
-            lastMessageAt = lastMsg.timestamp;
-          }
-          
-          friendsList.push({
-            id: friendId,
+          const lastMessage = lastMessages[index];
+
+          return {
+            id: friendIds[index],
             username: friendData.username || "Unknown",
             avatarColor: friendData.avatarColor || "zinc",
             isOnline: false, // Will be updated by socket
-            lastMessage: lastMessageText,
-            lastMessageAt
-          });
-        }
-      }
-      
-      // Fetch requests
-      for (const fromId of (userData.friendRequests || [])) {
-        const fromDoc = await getDoc(doc(db, 'users', fromId));
-        if (fromDoc.exists()) {
+            lastMessage: lastMessage?.text,
+            lastMessageAt: lastMessage?.timestamp
+          } as Friend;
+        })
+        .filter((f): f is Friend => f !== null);
+
+      // Batch fetch friend request user data
+      const requestDocs = await Promise.all(
+        requestIds.map(fromId => getDoc(doc(db, 'users', fromId)))
+      );
+
+      const requestsList: FriendRequest[] = requestDocs
+        .map((fromDoc, index) => {
+          if (!fromDoc.exists()) return null;
+
           const fromData = fromDoc.data() as User;
-          requestsList.push({
-            fromId,
+          return {
+            fromId: requestIds[index],
             fromUsername: fromData.username || "Unknown"
-          });
-        }
-      }
-      
+          };
+        })
+        .filter((r): r is FriendRequest => r !== null);
+
+      // Sort friends by last message timestamp
       const sortedFriends = friendsList.sort((a, b) => {
         if (!a.lastMessageAt) return 1;
         if (!b.lastMessageAt) return -1;
         return new Date(b.lastMessageAt).getTime() - new Date(a.lastMessageAt).getTime();
       });
-      
+
       setFriends(sortedFriends);
       setRequests(requestsList);
     } catch (e) {
