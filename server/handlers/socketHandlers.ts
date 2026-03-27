@@ -95,6 +95,13 @@ export class SocketHandlers {
           const isNew = this.addUserSocket(user.id, socket.id);
           if (isNew) this.notifyFriendsStatus(user.id, true);
 
+          // If user authenticated after joining the queue, update queued entry
+          // so future matches carry partnerUserId correctly.
+          const waitingEntry = waitingQueue.find((u) => u.socketId === socket.id);
+          if (waitingEntry) {
+            waitingEntry.userId = user.id;
+          }
+
           // If in an active chat, update partner's record
           const myChat = activeChats.get(socket.id);
           if (myChat) {
@@ -115,6 +122,12 @@ export class SocketHandlers {
           const isOffline = this.removeUserSocket(userId, socket.id);
           if (isOffline) this.notifyFriendsStatus(userId, false);
           socketToUser.delete(socket.id);
+
+          // Keep queue state consistent after logout.
+          const waitingEntry = waitingQueue.find((u) => u.socketId === socket.id);
+          if (waitingEntry) {
+            waitingEntry.userId = undefined;
+          }
 
           const myChat = activeChats.get(socket.id);
           if (myChat) {

@@ -5,6 +5,8 @@ import { onAuthStateChanged } from 'firebase/auth';
 import { doc, getDoc, setDoc, onSnapshot } from 'firebase/firestore';
 import { getDeviceId } from '../utils/device';
 
+const USERNAME_SETUP_PENDING_KEY = 'anon_chat_username_setup_pending';
+
 export const useAuth = () => {
   const [user, setUser] = useState<User | null>(null);
   const [isAuthReady, setIsAuthReady] = useState(false);
@@ -30,6 +32,12 @@ export const useAuth = () => {
           if (docSnap.exists()) {
             setUser(docSnap.data() as User);
           } else {
+            const isUsernameSetupPending = localStorage.getItem(USERNAME_SETUP_PENDING_KEY) === '1';
+            if (isUsernameSetupPending) {
+              // Auth modal is currently completing first-time profile setup.
+              return;
+            }
+
             // Only create profile for explicitly signed-in users (not anonymous)
             if (!firebaseUser.isAnonymous && !firebaseUser.email?.endsWith('@fallback.anonchat.local')) {
               const deviceId = getDeviceId();
