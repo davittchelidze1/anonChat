@@ -41,11 +41,30 @@ interface SocketHandlerDependencies {
 export function setupConnectionHandlers(deps: SocketHandlerDependencies) {
   const { socket, state, selectedFriend, handleStartDirectChat, fetchFriends } = deps;
 
-  socket.on(SOCKET_EVENTS.CONNECT, () => {
-    const storedToken = localStorage.getItem('anon_chat_token');
-    if (storedToken) {
-      socket.emit(SOCKET_EVENTS.AUTHENTICATE, storedToken);
+  socket.on(SOCKET_EVENTS.CONNECT, async () => {
+    let tokenToSend: string | null = null;
+
+    try {
+      const { auth } = await import('../firebase');
+      if (auth.currentUser) {
+        tokenToSend = await auth.currentUser.getIdToken();
+        localStorage.setItem('anon_chat_token', tokenToSend);
+      }
+    } catch (error) {
+      console.error('Failed to fetch fresh auth token for socket:', error);
     }
+
+    if (!tokenToSend) {
+      tokenToSend = localStorage.getItem('anon_chat_token');
+    }
+
+    if (tokenToSend) {
+      if (socket.auth) {
+        (socket.auth as { token?: string }).token = tokenToSend;
+      }
+      socket.emit(SOCKET_EVENTS.AUTHENTICATE, tokenToSend);
+    }
+
     fetchFriends();
     if (state === 'direct-chat' && selectedFriend) {
       handleStartDirectChat(selectedFriend);
