@@ -12,6 +12,32 @@ interface AuthModalProps {
   onSuccess: (user: UserType, token: string) => void;
 }
 
+function getAuthErrorMessage(err: unknown): string {
+  const errorCode =
+    typeof err === 'object' && err !== null && 'code' in err
+      ? String((err as { code?: string }).code)
+      : '';
+
+  switch (errorCode) {
+    case 'auth/popup-closed-by-user':
+      return 'Login cancelled.';
+    case 'auth/popup-blocked':
+      return 'Popup blocked by browser. Allow popups for this site and try again.';
+    case 'auth/cancelled-popup-request':
+      return 'Login already in progress. Please try again.';
+    case 'auth/unauthorized-domain':
+      return 'This domain is not authorized in Firebase Auth. Add this Render domain in Firebase Authentication > Settings > Authorized domains.';
+    case 'auth/operation-not-allowed':
+      return 'Google sign-in is not enabled in Firebase Authentication > Sign-in method.';
+    case 'auth/network-request-failed':
+      return 'Network error while connecting to Google. Check your connection and try again.';
+    case 'permission-denied':
+      return 'Google login succeeded, but Firestore denied profile access. Check Firestore rules.';
+    default:
+      return errorCode ? `Google sign-in failed (${errorCode}).` : 'Failed to connect to Google.';
+  }
+}
+
 export function AuthModal({ isOpen, onClose, onSuccess }: AuthModalProps) {
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState('');
@@ -50,12 +76,8 @@ export function AuthModal({ isOpen, onClose, onSuccess }: AuthModalProps) {
       }
       onClose();
     } catch (err: any) {
-      console.error(err);
-      if (err.code === 'auth/popup-closed-by-user') {
-        setError('Login cancelled');
-      } else {
-        setError('Failed to connect to Google');
-      }
+      console.error('Google login error:', err);
+      setError(getAuthErrorMessage(err));
     } finally {
       setIsLoading(false);
     }
