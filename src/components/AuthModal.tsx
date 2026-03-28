@@ -148,7 +148,6 @@ export function AuthModal({ isOpen, onClose, onSuccess }: AuthModalProps) {
             friends: [],
             friendRequests: [],
             createdAt: new Date().toISOString(),
-            authType: 'registered',
           };
 
       if (!userSnap.exists()) {

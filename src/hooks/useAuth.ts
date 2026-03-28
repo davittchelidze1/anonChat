@@ -52,8 +52,7 @@ export const useAuth = () => {
                 friends: [],
                 friendRequests: [],
                 deviceId,
-                createdAt: new Date().toISOString(),
-                authType: 'registered'
+                createdAt: new Date().toISOString()
               };
 
               try {
