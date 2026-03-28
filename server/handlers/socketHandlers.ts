@@ -278,48 +278,78 @@ export class SocketHandlers {
    * Setup game handlers
    */
   setupGameHandlers(socket: Socket) {
-    socket.on('game-invite', (gameType) => {
-      const chat = activeChats.get(socket.id);
-      if (chat) {
-        this.io.to(chat.partnerSocketId).emit('game-invited', gameType);
+    const getTargetSocketIds = (toUserId?: string): string[] => {
+      if (toUserId) {
+        const targetSockets = userToSockets.get(toUserId);
+        if (!targetSockets) return [];
+        return Array.from(targetSockets).filter((sId) => sId !== socket.id);
       }
+
+      const chat = activeChats.get(socket.id);
+      return chat ? [chat.partnerSocketId] : [];
+    };
+
+    socket.on('game-invite', (payload) => {
+      const gameType = typeof payload === 'string' ? payload : payload?.gameType;
+      const toUserId = typeof payload === 'object' ? payload?.toUserId : undefined;
+      if (!gameType) return;
+
+      const targetSocketIds = getTargetSocketIds(toUserId);
+      targetSocketIds.forEach((targetSocketId) => {
+        this.io.to(targetSocketId).emit('game-invited', gameType);
+      });
     });
 
-    socket.on('game-accept', (gameType) => {
-      const chat = activeChats.get(socket.id);
-      if (chat) {
-        const starter = Math.random() > 0.5 ? socket.id : chat.partnerSocketId;
-        this.io.to(socket.id).emit('game-started', { gameType, starter: starter === socket.id ? 'me' : 'partner' });
-        this.io.to(chat.partnerSocketId).emit('game-started', { gameType, starter: starter === chat.partnerSocketId ? 'me' : 'partner' });
-      }
+    socket.on('game-accept', (payload) => {
+      const gameType = typeof payload === 'string' ? payload : payload?.gameType;
+      const toUserId = typeof payload === 'object' ? payload?.toUserId : undefined;
+      if (!gameType) return;
+
+      const targetSocketIds = getTargetSocketIds(toUserId);
+      if (targetSocketIds.length === 0) return;
+
+      const starterIsMe = Math.random() > 0.5;
+      this.io.to(socket.id).emit('game-started', { gameType, starter: starterIsMe ? 'me' : 'partner' });
+      targetSocketIds.forEach((targetSocketId) => {
+        this.io.to(targetSocketId).emit('game-started', { gameType, starter: starterIsMe ? 'partner' : 'me' });
+      });
     });
 
-    socket.on('game-move', (move) => {
-      const chat = activeChats.get(socket.id);
-      if (chat) {
-        this.io.to(chat.partnerSocketId).emit('game-partner-move', move);
-      }
+    socket.on('game-move', (payload) => {
+      const move = typeof payload === 'object' && payload !== null && 'move' in payload ? payload.move : payload;
+      const toUserId = typeof payload === 'object' ? payload?.toUserId : undefined;
+      const targetSocketIds = getTargetSocketIds(toUserId);
+
+      targetSocketIds.forEach((targetSocketId) => {
+        this.io.to(targetSocketId).emit('game-partner-move', move);
+      });
     });
 
-    socket.on('doodle-draw', (stroke) => {
-      const chat = activeChats.get(socket.id);
-      if (chat) {
-        this.io.to(chat.partnerSocketId).emit('doodle-partner-draw', stroke);
-      }
+    socket.on('doodle-draw', (payload) => {
+      const stroke = typeof payload === 'object' && payload !== null && 'stroke' in payload ? payload.stroke : payload;
+      const toUserId = typeof payload === 'object' ? payload?.toUserId : undefined;
+      if (!stroke) return;
+
+      const targetSocketIds = getTargetSocketIds(toUserId);
+      targetSocketIds.forEach((targetSocketId) => {
+        this.io.to(targetSocketId).emit('doodle-partner-draw', stroke);
+      });
     });
 
-    socket.on('doodle-clear', () => {
-      const chat = activeChats.get(socket.id);
-      if (chat) {
-        this.io.to(chat.partnerSocketId).emit('doodle-partner-clear');
-      }
+    socket.on('doodle-clear', (payload) => {
+      const toUserId = typeof payload === 'object' ? payload?.toUserId : undefined;
+      const targetSocketIds = getTargetSocketIds(toUserId);
+      targetSocketIds.forEach((targetSocketId) => {
+        this.io.to(targetSocketId).emit('doodle-partner-clear');
+      });
     });
 
-    socket.on('game-cancel', () => {
-      const chat = activeChats.get(socket.id);
-      if (chat) {
-        this.io.to(chat.partnerSocketId).emit('game-cancelled');
-      }
+    socket.on('game-cancel', (payload) => {
+      const toUserId = typeof payload === 'object' ? payload?.toUserId : undefined;
+      const targetSocketIds = getTargetSocketIds(toUserId);
+      targetSocketIds.forEach((targetSocketId) => {
+        this.io.to(targetSocketId).emit('game-cancelled');
+      });
     });
   }
 

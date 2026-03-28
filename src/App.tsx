@@ -45,7 +45,8 @@ export default function App() {
   // Use custom hooks for chat and game state
   const isDirectChat = state === 'direct-chat';
   const chat = useChat(socket, user, selectedFriend, isDirectChat);
-  const game = useGameState(socket);
+  const gamePartnerUserId = isDirectChat ? (selectedFriend?.id || null) : chat.partnerUserId;
+  const game = useGameState(socket, gamePartnerUserId);
 
   // Reset partner info when entering chat state
   useEffect(() => {

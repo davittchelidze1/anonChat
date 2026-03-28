@@ -9,26 +9,42 @@ import { GameState, GameType } from '../types';
 import { SOCKET_EVENTS } from '../events';
 import { checkTicTacToeWinner, checkRPSWinner } from '../utils/helpers';
 
-export function useGameState(socket: Socket | null) {
+type TargetedPayload<T> = T & { toUserId?: string };
+
+export function useGameState(socket: Socket | null, partnerUserId?: string | null) {
   const [gameState, setGameState] = useState<GameState | null>(null);
 
+  const withTarget = useCallback(<T extends object>(payload: T): TargetedPayload<T> => {
+    if (!partnerUserId) return payload;
+    return { ...payload, toUserId: partnerUserId };
+  }, [partnerUserId]);
+
   const handleGameInvite = useCallback((type: GameType) => {
-    socket?.emit(SOCKET_EVENTS.GAME_INVITE, type);
+    socket?.emit(
+      SOCKET_EVENTS.GAME_INVITE,
+      partnerUserId ? withTarget({ gameType: type }) : type
+    );
     setGameState({
       type,
       status: 'inviting',
       turn: 'me'
     });
-  }, [socket]);
+  }, [socket, partnerUserId, withTarget]);
 
   const handleGameAccept = useCallback((type: GameType) => {
-    socket?.emit(SOCKET_EVENTS.GAME_ACCEPT, type);
-  }, [socket]);
+    socket?.emit(
+      SOCKET_EVENTS.GAME_ACCEPT,
+      partnerUserId ? withTarget({ gameType: type }) : type
+    );
+  }, [socket, partnerUserId, withTarget]);
 
   const handleGameCancel = useCallback(() => {
-    socket?.emit(SOCKET_EVENTS.GAME_CANCEL);
+    socket?.emit(
+      SOCKET_EVENTS.GAME_CANCEL,
+      partnerUserId ? withTarget({}) : undefined
+    );
     setGameState(null);
-  }, [socket]);
+  }, [socket, partnerUserId, withTarget]);
 
   const handleGameMove = useCallback((move: number | string) => {
     if (!gameState || gameState.status !== 'playing') return;
@@ -38,7 +54,10 @@ export function useGameState(socket: Socket | null) {
 
       const newBoard = [...(gameState.board || [])];
       newBoard[move as number] = 'X';
-      socket?.emit(SOCKET_EVENTS.GAME_MOVE, move);
+      socket?.emit(
+        SOCKET_EVENTS.GAME_MOVE,
+        partnerUserId ? withTarget({ move }) : move
+      );
 
       const winner = checkTicTacToeWinner(newBoard);
       if (winner) {
@@ -53,7 +72,10 @@ export function useGameState(socket: Socket | null) {
       }
     } else if (gameState.type === 'rps') {
       if (gameState.myMove) return;
-      socket?.emit(SOCKET_EVENTS.GAME_MOVE, move);
+      socket?.emit(
+        SOCKET_EVENTS.GAME_MOVE,
+        partnerUserId ? withTarget({ move }) : move
+      );
 
       if (gameState.partnerMove) {
         const winner = checkRPSWinner(move as string, gameState.partnerMove);
@@ -62,7 +84,7 @@ export function useGameState(socket: Socket | null) {
         setGameState({ ...gameState, myMove: move as string });
       }
     }
-  }, [socket, gameState]);
+  }, [socket, gameState, partnerUserId, withTarget]);
 
   const handleDoodleDraw = useCallback((stroke: { x: number; y: number; color: string; isStart: boolean }) => {
     setGameState((prev) => {
@@ -72,8 +94,11 @@ export function useGameState(socket: Socket | null) {
         strokes: [...(prev.strokes || []), stroke]
       };
     });
-    socket?.emit(SOCKET_EVENTS.DOODLE_DRAW, stroke);
-  }, [socket]);
+    socket?.emit(
+      SOCKET_EVENTS.DOODLE_DRAW,
+      partnerUserId ? withTarget({ stroke }) : stroke
+    );
+  }, [socket, partnerUserId, withTarget]);
 
   const handleDoodleClear = useCallback(() => {
     setGameState((prev) => {
@@ -83,8 +108,11 @@ export function useGameState(socket: Socket | null) {
         strokes: []
       };
     });
-    socket?.emit(SOCKET_EVENTS.DOODLE_CLEAR);
-  }, [socket]);
+    socket?.emit(
+      SOCKET_EVENTS.DOODLE_CLEAR,
+      partnerUserId ? withTarget({}) : undefined
+    );
+  }, [socket, partnerUserId, withTarget]);
 
   return {
     gameState,
