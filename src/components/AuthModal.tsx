@@ -70,6 +70,24 @@ function getAuthErrorMessage(err: unknown): string {
   }
 }
 
+function getFirestoreWriteErrorMessage(err: unknown): string {
+  const errorCode =
+    typeof err === 'object' && err !== null && 'code' in err
+      ? String((err as { code?: string }).code)
+      : '';
+
+  switch (errorCode) {
+    case 'permission-denied':
+      return 'Could not save username: Firestore rules denied write access.';
+    case 'unavailable':
+      return 'Could not save username: Firestore is temporarily unavailable.';
+    default:
+      return errorCode
+        ? `Could not save username (${errorCode}).`
+        : 'Could not save username. Please try again.';
+  }
+}
+
 export function AuthModal({ isOpen, onClose, onSuccess }: AuthModalProps) {
   const [step, setStep] = useState<AuthStep>('signin');
   const [isLoading, setIsLoading] = useState(false);
@@ -143,7 +161,7 @@ export function AuthModal({ isOpen, onClose, onSuccess }: AuthModalProps) {
       onClose();
     } catch (finalizeError) {
       console.error('Failed to finish profile setup:', finalizeError);
-      setError('Could not save username. Please try again.');
+      setError(getFirestoreWriteErrorMessage(finalizeError));
     } finally {
       setIsLoading(false);
     }

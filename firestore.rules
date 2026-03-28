@@ -21,7 +21,7 @@ service cloud.firestore {
     }
 
     function isValidUser(data) {
-      return hasOnlyAllowedFields(['id', 'username', 'avatarColor', 'friends', 'friendRequests', 'deviceId', 'createdAt']) &&
+          return hasOnlyAllowedFields(['id', 'username', 'avatarColor', 'friends', 'friendRequests', 'deviceId', 'createdAt', 'authType', 'anonymousDisabled']) &&
              hasRequiredFields(['id', 'username', 'avatarColor', 'friends', 'friendRequests', 'createdAt']) &&
              data.id is string && data.id.size() > 0 && data.id.size() < 100 &&
              data.username is string && data.username.size() > 0 && data.username.size() < 50 &&
@@ -29,6 +29,8 @@ service cloud.firestore {
              data.friends is list && data.friends.size() <= 1000 &&
              data.friendRequests is list && data.friendRequests.size() <= 1000 &&
              (!('deviceId' in data) || (data.deviceId is string && data.deviceId.size() < 100)) &&
+            (!('authType' in data) || (data.authType is string && (data.authType == 'anonymous' || data.authType == 'registered'))) &&
+            (!('anonymousDisabled' in data) || (data.anonymousDisabled is bool)) &&
              data.createdAt is string;
     }
 
