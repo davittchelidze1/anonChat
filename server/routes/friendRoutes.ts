@@ -85,8 +85,32 @@ export class FriendRequestRoutes {
 
       res.json({ ok: true });
     } catch (error: any) {
-      const code = error?.message || 'request_failed';
-      const status = code === 'quota_exceeded' ? 429 : 400;
+      const rawCode = String(error?.message || 'request_failed');
+      const knownCodes = new Set([
+        'quota_exceeded',
+        'already_friends',
+        'request_already_sent',
+        'invalid_target',
+        'cannot_add_self',
+      ]);
+
+      let code = rawCode;
+      let status = 400;
+
+      if (code === 'quota_exceeded') {
+        status = 429;
+      } else if (!knownCodes.has(code)) {
+        const lower = rawCode.toLowerCase();
+        if (lower.includes('default credentials') || lower.includes('insufficient permissions')) {
+          code = 'server_not_configured';
+          status = 503;
+        } else {
+          code = 'request_failed';
+          status = 500;
+        }
+        console.error('sendRequest unexpected error:', rawCode);
+      }
+
       res.status(status).json({ error: code });
     }
   }

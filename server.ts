@@ -31,22 +31,41 @@ async function startServer() {
   // Initialize Firebase Admin
   const serviceAccountJson = process.env.FIREBASE_SERVICE_ACCOUNT_JSON;
   const serviceAccountFile = process.env.FIREBASE_SERVICE_ACCOUNT_FILE;
+  const defaultServiceAccountPath = path.resolve(process.cwd(), 'firebase-service-account.json');
+
+  const normalizeServiceAccount = (input: any) => {
+    if (input?.private_key && typeof input.private_key === 'string') {
+      return {
+        ...input,
+        private_key: input.private_key.replace(/\\n/g, '\n'),
+      };
+    }
+    return input;
+  };
+
   const firebaseAdminReady = (() => {
     try {
       if (!admin.apps.length) {
         if (serviceAccountJson) {
-          const parsed = JSON.parse(serviceAccountJson);
+          const parsed = normalizeServiceAccount(JSON.parse(serviceAccountJson));
           admin.initializeApp({
             credential: admin.credential.cert(parsed),
           });
         } else if (serviceAccountFile) {
           const raw = fs.readFileSync(path.resolve(process.cwd(), serviceAccountFile), "utf8");
-          const parsed = JSON.parse(raw);
+          const parsed = normalizeServiceAccount(JSON.parse(raw));
+          admin.initializeApp({
+            credential: admin.credential.cert(parsed),
+          });
+        } else if (fs.existsSync(defaultServiceAccountPath)) {
+          const raw = fs.readFileSync(defaultServiceAccountPath, "utf8");
+          const parsed = normalizeServiceAccount(JSON.parse(raw));
           admin.initializeApp({
             credential: admin.credential.cert(parsed),
           });
         } else {
-          admin.initializeApp();
+          console.warn("Firebase Admin not configured: set FIREBASE_SERVICE_ACCOUNT_JSON or FIREBASE_SERVICE_ACCOUNT_FILE.");
+          return false;
         }
       }
       return true;

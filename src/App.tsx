@@ -258,6 +258,12 @@ export default function App() {
           ? 'You are already friends with this user.'
           : err.message === 'request_already_sent'
           ? 'You have already sent a friend request to this user.'
+          : err.message === 'invalid_target'
+          ? 'This stranger account is not fully set up yet. Ask them to finish sign-in and try again.'
+          : err.message === 'unauthorized'
+          ? 'Your session expired. Please sign out and sign in again.'
+          : err.message === 'server_not_configured'
+          ? 'Friend requests are not configured on server yet. Please check Firebase Admin setup.'
           : 'Failed to send friend request.';
 
         chat.setMessages((prev) => [...prev, createSystemMessage(errorMessage, 'system-error')]);
