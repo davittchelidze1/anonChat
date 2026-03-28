@@ -196,6 +196,23 @@ export default function App() {
     setSelectedFriend(null);
   };
 
+  const resolvePartnerUserId = async (): Promise<string | null> => {
+    if (!socket) return null;
+
+    return await new Promise((resolve) => {
+      socket.timeout(3000).emit(
+        SOCKET_EVENTS.RESOLVE_PARTNER_USER,
+        (err: unknown, payload?: { partnerUserId?: string | null }) => {
+          if (err) {
+            resolve(null);
+            return;
+          }
+          resolve(payload?.partnerUserId || null);
+        }
+      );
+    });
+  };
+
   const handleAddFriend = async () => {
     if (!user) {
       setIsAuthModalOpen(true);
@@ -205,7 +222,16 @@ export default function App() {
       )]);
       return;
     }
-    if (!chat.partnerUserId) {
+
+    let targetPartnerId = chat.partnerUserId;
+    if (!targetPartnerId) {
+      targetPartnerId = await resolvePartnerUserId();
+      if (targetPartnerId) {
+        chat.setPartnerUserId(targetPartnerId);
+      }
+    }
+
+    if (!targetPartnerId) {
       chat.setMessages((prev) => [...prev, createSystemMessage(
         'This stranger is not logged in and cannot be added as a friend.',
         'system-no-auth'
@@ -213,16 +239,16 @@ export default function App() {
       return;
     }
 
-    if (requests.some(r => r.fromId === chat.partnerUserId)) {
-      handleAcceptFriendRequest(chat.partnerUserId);
+    if (requests.some(r => r.fromId === targetPartnerId)) {
+      handleAcceptFriendRequest(targetPartnerId);
     } else {
       try {
-        await FriendService.sendFriendRequest(chat.partnerUserId);
+        await FriendService.sendFriendRequest(targetPartnerId);
         chat.setMessages((prev) => [...prev, createSystemMessage(
           'Friend request sent.',
           'system-req'
         )]);
-        socket?.emit(SOCKET_EVENTS.FRIEND_REQUEST_SENT, chat.partnerUserId);
+        socket?.emit(SOCKET_EVENTS.FRIEND_REQUEST_SENT, targetPartnerId);
       } catch (err: any) {
         console.error('Failed to send friend request', err);
 
@@ -288,6 +314,27 @@ export default function App() {
       (socket.auth as { token?: string }).token = undefined;
     }
     socket?.emit(SOCKET_EVENTS.AUTHENTICATE, null);
+  };
+
+  const handleUpdateUsername = async (username: string) => {
+    if (!user) {
+      throw new Error('You must be logged in.');
+    }
+
+    const cleanUsername = username
+      .trim()
+      .toLowerCase()
+      .replace(/[^a-z0-9_]/g, '')
+      .slice(0, 24);
+
+    if (cleanUsername.length < 3) {
+      throw new Error('Username must be at least 3 characters.');
+    }
+
+    const { db } = await import('./firebase');
+    const { doc, updateDoc } = await import('firebase/firestore');
+    await updateDoc(doc(db, 'users', user.id), { username: cleanUsername });
+    setUser((prev) => (prev ? { ...prev, username: cleanUsername } : prev));
   };
 
   const handleAuthSuccess = (userData: User, token: string) => {
@@ -390,6 +437,7 @@ export default function App() {
         user={user}
         onLogout={handleLogout}
         friendCount={friends.length}
+        onUpdateUsername={handleUpdateUsername}
       />
 
       <ImageModal

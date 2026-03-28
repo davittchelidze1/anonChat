@@ -9,10 +9,57 @@ interface ProfileModalProps {
   user: UserType | null;
   onLogout: () => void;
   friendCount: number;
+  onUpdateUsername: (username: string) => Promise<void>;
 }
 
-export function ProfileModal({ isOpen, onClose, user, onLogout, friendCount }: ProfileModalProps) {
+function sanitizeUsername(value: string): string {
+  return value
+    .trim()
+    .toLowerCase()
+    .replace(/[^a-z0-9_]/g, '')
+    .slice(0, 24);
+}
+
+function buildRandomUsername(base: string): string {
+  const cleanedBase = sanitizeUsername(base) || 'anon';
+  const suffix = Math.floor(100 + Math.random() * 900);
+  return sanitizeUsername(`${cleanedBase}_${suffix}`);
+}
+
+export function ProfileModal({ isOpen, onClose, user, onLogout, friendCount, onUpdateUsername }: ProfileModalProps) {
+  const [isEditingUsername, setIsEditingUsername] = React.useState(false);
+  const [usernameInput, setUsernameInput] = React.useState('');
+  const [isSavingUsername, setIsSavingUsername] = React.useState(false);
+  const [usernameError, setUsernameError] = React.useState('');
+
+  React.useEffect(() => {
+    if (isOpen && user) {
+      setUsernameInput(user.username || '');
+      setUsernameError('');
+      setIsEditingUsername(false);
+    }
+  }, [isOpen, user?.username]);
+
   if (!user) return null;
+
+  const saveUsername = async () => {
+    const cleanUsername = sanitizeUsername(usernameInput);
+    if (cleanUsername.length < 3) {
+      setUsernameError('Username must be at least 3 characters.');
+      return;
+    }
+
+    setIsSavingUsername(true);
+    setUsernameError('');
+    try {
+      await onUpdateUsername(cleanUsername);
+      setIsEditingUsername(false);
+    } catch (err: any) {
+      setUsernameError(err?.message || 'Failed to update username.');
+    } finally {
+      setIsSavingUsername(false);
+    }
+  };
 
   return (
     <AnimatePresence>
@@ -51,7 +98,61 @@ export function ProfileModal({ isOpen, onClose, user, onLogout, friendCount }: P
               </div>
 
               <div className="space-y-1 mb-8">
-                <h2 className="text-3xl font-bold tracking-tight text-white">{user.username}</h2>
+                {!isEditingUsername ? (
+                  <div className="flex items-center gap-3">
+                    <h2 className="text-3xl font-bold tracking-tight text-white">{user.username}</h2>
+                    <button
+                      onClick={() => {
+                        setUsernameInput(user.username || '');
+                        setUsernameError('');
+                        setIsEditingUsername(true);
+                      }}
+                      className="text-[10px] uppercase tracking-widest font-bold px-3 py-1.5 rounded-xl bg-indigo-500/10 text-indigo-300 border border-indigo-500/20 hover:bg-indigo-500/20 transition-all cursor-pointer"
+                    >
+                      Edit
+                    </button>
+                  </div>
+                ) : (
+                  <div className="space-y-3">
+                    <input
+                      value={usernameInput}
+                      onChange={(e) => setUsernameInput(sanitizeUsername(e.target.value))}
+                      placeholder="your_username"
+                      maxLength={24}
+                      className="w-full py-3 px-4 rounded-2xl bg-zinc-950 text-zinc-100 border border-white/10 outline-none focus:border-indigo-500/50"
+                    />
+                    {usernameError && (
+                      <p className="text-xs text-rose-400">{usernameError}</p>
+                    )}
+                    <div className="flex gap-2">
+                      <button
+                        onClick={saveUsername}
+                        disabled={isSavingUsername}
+                        className="flex-1 py-2 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-bold uppercase tracking-widest transition-all cursor-pointer disabled:opacity-60"
+                      >
+                        {isSavingUsername ? 'Saving...' : 'Save'}
+                      </button>
+                      <button
+                        onClick={() => setUsernameInput(buildRandomUsername(user.username || 'anon'))}
+                        disabled={isSavingUsername}
+                        className="flex-1 py-2 rounded-xl bg-zinc-800 hover:bg-zinc-700 text-zinc-200 text-xs font-bold uppercase tracking-widest transition-all cursor-pointer disabled:opacity-60"
+                      >
+                        Random
+                      </button>
+                      <button
+                        onClick={() => {
+                          setIsEditingUsername(false);
+                          setUsernameError('');
+                          setUsernameInput(user.username || '');
+                        }}
+                        disabled={isSavingUsername}
+                        className="py-2 px-3 rounded-xl bg-zinc-800 hover:bg-zinc-700 text-zinc-300 text-xs font-bold uppercase tracking-widest transition-all cursor-pointer disabled:opacity-60"
+                      >
+                        Cancel
+                      </button>
+                    </div>
+                  </div>
+                )}
                 <p className="text-zinc-500 text-sm flex items-center gap-2">
                   <Shield className="w-3 h-3 text-indigo-400" />
                   Verified Member

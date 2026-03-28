@@ -61,6 +61,7 @@ export const SOCKET_EVENTS = {
 
   // Friend request events
   FRIEND_REQUEST_SENT: 'friend-request-sent',
+  RESOLVE_PARTNER_USER: 'resolve-partner-user',
   NEW_FRIEND_REQUEST: 'new-friend-request',
   FRIEND_REQUEST_ACCEPTED: 'friend-request-accepted',
   FRIEND_REQUEST_DECLINED: 'friend-request-declined',

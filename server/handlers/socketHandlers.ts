@@ -160,22 +160,24 @@ export class SocketHandlers {
 
       if (partnerIndex !== -1) {
         const partner = waitingQueue.splice(partnerIndex, 1)[0];
+        const myResolvedUserId = socketToUser.get(socket.id) ?? userId;
+        const partnerResolvedUserId = socketToUser.get(partner.socketId) ?? partner.userId;
 
         activeChats.set(socket.id, {
           partnerSocketId: partner.socketId,
           partnerSessionId: partner.sessionId,
           mediaConsent: false,
-          partnerUserId: partner.userId
+          partnerUserId: partnerResolvedUserId
         });
         activeChats.set(partner.socketId, {
           partnerSocketId: socket.id,
           partnerSessionId: sessionId,
           mediaConsent: false,
-          partnerUserId: userId
+          partnerUserId: myResolvedUserId
         });
 
-        this.io.to(socket.id).emit('matched', { partnerUserId: partner.userId });
-        this.io.to(partner.socketId).emit('matched', { partnerUserId: userId });
+        this.io.to(socket.id).emit('matched', { partnerUserId: partnerResolvedUserId });
+        this.io.to(partner.socketId).emit('matched', { partnerUserId: myResolvedUserId });
         console.log(`Matched ${socket.id} with ${partner.socketId}`);
       } else {
         waitingQueue.push({ socketId: socket.id, sessionId, userId });
@@ -325,6 +327,11 @@ export class SocketHandlers {
    * Setup friend request socket handlers
    */
   setupFriendRequestHandlers(socket: Socket) {
+    socket.on('resolve-partner-user', (ack?: (payload: { partnerUserId: string | null }) => void) => {
+      const chat = activeChats.get(socket.id);
+      ack?.({ partnerUserId: chat?.partnerUserId ?? null });
+    });
+
     socket.on('friend-request-sent', (partnerUserId) => {
       const myUserId = socketToUser.get(socket.id);
       if (!myUserId) return;
