@@ -6,6 +6,7 @@ import path from "path";
 import fs from "fs";
 import cookieParser from "cookie-parser";
 import admin from "firebase-admin";
+import { getFirestore } from "firebase-admin/firestore";
 
 import { SERVER_CONFIG } from './server/constants';
 import {
@@ -74,7 +75,20 @@ async function startServer() {
       return false;
     }
   })();
-  const firestore = firebaseAdminReady ? admin.firestore() : null;
+  const firestoreDatabaseId = process.env.FIREBASE_DATABASE_ID || process.env.VITE_FIREBASE_DATABASE_ID;
+  const firestore = firebaseAdminReady
+    ? (firestoreDatabaseId
+        ? getFirestore(admin.app(), firestoreDatabaseId)
+        : getFirestore(admin.app()))
+    : null;
+
+  if (firebaseAdminReady) {
+    console.log(
+      firestoreDatabaseId
+        ? `Firebase Admin Firestore DB: ${firestoreDatabaseId}`
+        : "Firebase Admin Firestore DB: (default)"
+    );
+  }
 
   loadData();
 

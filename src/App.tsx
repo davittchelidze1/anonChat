@@ -264,6 +264,8 @@ export default function App() {
           ? 'Your session expired. Please sign out and sign in again.'
           : err.message === 'server_not_configured'
           ? 'Friend requests are not configured on server yet. Please check Firebase Admin setup.'
+          : err.message === 'server_database_mismatch'
+          ? 'Server is connected to the wrong Firestore database. Set FIREBASE_DATABASE_ID on server to match VITE_FIREBASE_DATABASE_ID.'
           : 'Failed to send friend request.';
 
         chat.setMessages((prev) => [...prev, createSystemMessage(errorMessage, 'system-error')]);

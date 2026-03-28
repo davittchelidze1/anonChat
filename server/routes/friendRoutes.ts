@@ -104,6 +104,9 @@ export class FriendRequestRoutes {
         if (lower.includes('default credentials') || lower.includes('insufficient permissions')) {
           code = 'server_not_configured';
           status = 503;
+        } else if (lower.includes('database') && lower.includes('not found')) {
+          code = 'server_database_mismatch';
+          status = 503;
         } else {
           code = 'request_failed';
           status = 500;
