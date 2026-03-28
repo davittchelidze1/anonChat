@@ -30,7 +30,7 @@ import {
 
 export default function App() {
   const socket = useSocket();
-  const { user, fetchUser, setUser } = useAuth();
+  const { user, isAuthReady, fetchUser, setUser } = useAuth();
   const { friends, requests, setFriends, setRequests, fetchFriends } = useFriends();
 
   const [state, setState] = useState<AppState>('landing');
@@ -130,6 +130,48 @@ export default function App() {
       cleanupAllSocketHandlers(socket);
     };
   }, [socket, state, selectedFriend, friends]);
+
+  // Keep socket auth state aligned with Firebase auth state.
+  // This covers persisted sessions where UI is signed in but socket connected before auth was ready.
+  useEffect(() => {
+    if (!socket || !isAuthReady) return;
+
+    let isCancelled = false;
+
+    const syncSocketAuth = async () => {
+      try {
+        const { auth } = await import('./firebase');
+
+        if (auth.currentUser) {
+          const token = await auth.currentUser.getIdToken();
+          if (isCancelled) return;
+
+          localStorage.setItem('anon_chat_token', token);
+          if (socket.auth) {
+            (socket.auth as { token?: string }).token = token;
+          }
+          socket.emit(SOCKET_EVENTS.AUTHENTICATE, token);
+          return;
+        }
+
+        if (isCancelled) return;
+
+        localStorage.removeItem('anon_chat_token');
+        if (socket.auth) {
+          (socket.auth as { token?: string }).token = undefined;
+        }
+        socket.emit(SOCKET_EVENTS.AUTHENTICATE, null);
+      } catch (error) {
+        console.error('Failed to sync socket auth state:', error);
+      }
+    };
+
+    syncSocketAuth();
+
+    return () => {
+      isCancelled = true;
+    };
+  }, [socket, isAuthReady, user?.id]);
 
   const startSearching = () => {
     chat.setMessages([]);
