@@ -7,6 +7,7 @@ interface LandingViewProps {
   onlineCount: number;
   user: User | null;
   friends: Friend[];
+  totalUnreadCount: number;
   onStartSearching: () => void;
   onOpenAuth: () => void;
   onLogout: () => void;
@@ -19,6 +20,7 @@ export function LandingView({
   onlineCount, 
   user, 
   friends,
+  totalUnreadCount,
   onStartSearching, 
   onOpenAuth, 
   onLogout, 
@@ -46,10 +48,15 @@ export function LandingView({
             <>
               <button
                 onClick={onOpenFriends}
-                className="flex items-center gap-2 px-4 py-2 bg-zinc-900 hover:bg-zinc-800 text-zinc-300 rounded-full text-xs font-bold border border-zinc-800 transition-all cursor-pointer"
+                className="relative flex items-center gap-2 px-4 py-2 bg-zinc-900 hover:bg-zinc-800 text-zinc-300 rounded-full text-xs font-bold border border-zinc-800 transition-all cursor-pointer"
               >
                 <Users className="w-4 h-4" />
                 Friends
+                {totalUnreadCount > 0 && (
+                  <span className="absolute -top-2 -right-2 min-w-[18px] h-[18px] px-1 rounded-full bg-rose-500 text-white text-[10px] leading-[18px] text-center font-black">
+                    {totalUnreadCount > 99 ? '99+' : totalUnreadCount}
+                  </span>
+                )}
               </button>
               <div className="flex items-center gap-3 pl-3 border-l border-white/10">
                 <button 
@@ -96,10 +103,15 @@ export function LandingView({
         {user && (
           <button
             onClick={onOpenFriends}
-            className="px-6 sm:px-8 py-3.5 sm:py-4 bg-zinc-900 hover:bg-zinc-800 text-white rounded-full font-semibold text-base sm:text-lg border border-white/10 transition-all hover:scale-105 active:scale-95 cursor-pointer flex items-center gap-2"
+            className="relative px-6 sm:px-8 py-3.5 sm:py-4 bg-zinc-900 hover:bg-zinc-800 text-white rounded-full font-semibold text-base sm:text-lg border border-white/10 transition-all hover:scale-105 active:scale-95 cursor-pointer flex items-center gap-2"
           >
             <Users className="w-5 h-5 text-indigo-400" />
             My Friends
+            {totalUnreadCount > 0 && (
+              <span className="absolute -top-2 -right-2 min-w-[20px] h-[20px] px-1 rounded-full bg-rose-500 text-white text-[10px] leading-[20px] text-center font-black">
+                {totalUnreadCount > 99 ? '99+' : totalUnreadCount}
+              </span>
+            )}
           </button>
         )}
       </div>
@@ -126,6 +138,11 @@ export function LandingView({
                   <div className="flex items-center gap-2">
                     <span className="font-bold text-sm text-white truncate">{friend.username}</span>
                     {friend.isOnline && <div className="w-1.5 h-1.5 rounded-full bg-emerald-500" />}
+                    {(friend.unreadCount || 0) > 0 && (
+                      <span className="min-w-[18px] h-[18px] px-1 rounded-full bg-rose-500 text-white text-[10px] leading-[18px] text-center font-black">
+                        {(friend.unreadCount || 0) > 99 ? '99+' : friend.unreadCount}
+                      </span>
+                    )}
                   </div>
                   <p className="text-xs text-zinc-500 truncate">
                     {friend.lastMessage || (friend.isOnline ? 'Online' : 'Offline')}

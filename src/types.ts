@@ -32,6 +32,8 @@ export type Friend = {
   isOnline: boolean;
   lastMessage?: string;
   lastMessageAt?: string;
+  lastMessageId?: string;
+  unreadCount?: number;
 };
 
 export type FriendRequest = {

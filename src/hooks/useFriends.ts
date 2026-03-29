@@ -36,6 +36,7 @@ export const useFriends = () => {
         if (!messagesSnap.empty) {
           const lastMsg = messagesSnap.docs[0].data();
           return {
+            id: (lastMsg.id as string) || messagesSnap.docs[0].id,
             text: lastMsg.text || (lastMsg.image ? "Sent an image" : "Sent a video"),
             timestamp: lastMsg.timestamp
           };
@@ -58,6 +59,8 @@ export const useFriends = () => {
             username: friendData.username || "Unknown",
             avatarColor: friendData.avatarColor || "zinc",
             isOnline: false,
+            unreadCount: 0,
+            lastMessageId: lastMessage?.id,
             lastMessage: lastMessage?.text,
             lastMessageAt: lastMessage?.timestamp
           } as Friend;
@@ -90,9 +93,11 @@ export const useFriends = () => {
 
       setFriends((prev) => {
         const prevOnline = new Map(prev.map((friend) => [friend.id, friend.isOnline]));
+        const prevUnread = new Map(prev.map((friend) => [friend.id, friend.unreadCount || 0]));
         return sortedFriends.map((friend) => ({
           ...friend,
           isOnline: prevOnline.get(friend.id) ?? false,
+          unreadCount: prevUnread.get(friend.id) ?? 0,
         }));
       });
       setRequests(requestsList);

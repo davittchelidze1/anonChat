@@ -83,6 +83,11 @@ export function FriendsView({ friends, requests, onBack, onAcceptRequest, onDecl
                       <div className="flex items-center gap-2">
                         <span className="font-bold truncate">{friend.username}</span>
                         {friend.isOnline && <div className="w-2 h-2 rounded-full bg-emerald-500" />}
+                        {(friend.unreadCount || 0) > 0 && (
+                          <span className="min-w-[18px] h-[18px] px-1 rounded-full bg-rose-500 text-white text-[10px] leading-[18px] text-center font-black">
+                            {(friend.unreadCount || 0) > 99 ? '99+' : friend.unreadCount}
+                          </span>
+                        )}
                       </div>
                       <p className="text-xs text-zinc-500 truncate">
                         {friend.lastMessage || (friend.isOnline ? 'Online' : 'Offline')}

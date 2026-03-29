@@ -3,7 +3,7 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { useSocket } from './hooks/useSocket';
 import { useAuth } from './hooks/useAuth';
 import { useFriends } from './hooks/useFriends';
@@ -41,12 +41,24 @@ export default function App() {
   const [onlineCount, setOnlineCount] = useState(0);
   const [pendingFriendRequest, setPendingFriendRequest] = useState<{ fromId: string; fromUsername: string } | null>(null);
   const [pendingMessageNotification, setPendingMessageNotification] = useState<{ senderId: string; senderUsername: string; text: string } | null>(null);
+  const stateRef = useRef<AppState>(state);
+  const selectedFriendIdRef = useRef<string | null>(null);
+  const latestMessageByFriendRef = useRef<Map<string, string>>(new Map());
 
   // Use custom hooks for chat and game state
   const isDirectChat = state === 'direct-chat';
   const chat = useChat(socket, user, selectedFriend, isDirectChat);
   const gamePartnerUserId = isDirectChat ? (selectedFriend?.id || null) : chat.partnerUserId;
   const game = useGameState(socket, gamePartnerUserId);
+  const totalUnreadCount = friends.reduce((sum, friend) => sum + (friend.unreadCount || 0), 0);
+
+  const sortFriendsByRecent = (list: Friend[]) => {
+    return [...list].sort((a, b) => {
+      if (!a.lastMessageAt) return 1;
+      if (!b.lastMessageAt) return -1;
+      return new Date(b.lastMessageAt).getTime() - new Date(a.lastMessageAt).getTime();
+    });
+  };
 
   // Reset partner info when entering chat state
   useEffect(() => {
@@ -87,6 +99,111 @@ export default function App() {
     }
   }, [pendingMessageNotification]);
 
+  useEffect(() => {
+    stateRef.current = state;
+    selectedFriendIdRef.current = selectedFriend?.id || null;
+  }, [state, selectedFriend?.id]);
+
+  // Realtime last-message previews + unread counters for all friends.
+  useEffect(() => {
+    if (!user || friends.length === 0) return;
+
+    let cancelled = false;
+    const unsubs: Array<() => void> = [];
+    const friendIds = friends.map((friend) => friend.id);
+
+    const setupListeners = async () => {
+      const { db } = await import('./firebase');
+      const { collection, query, orderBy, limit, onSnapshot } = await import('firebase/firestore');
+
+      if (cancelled) return;
+
+      friendIds.forEach((friendId) => {
+        const chatId = [user.id, friendId].sort().join('_');
+        const messagesRef = collection(db, 'directMessages', chatId, 'messages');
+        const q = query(messagesRef, orderBy('timestamp', 'desc'), limit(1));
+
+        const unsubscribe = onSnapshot(q, (snapshot) => {
+          if (snapshot.empty) return;
+
+          const raw = snapshot.docs[0].data() as {
+            id?: string;
+            senderId?: string;
+            text?: string;
+            image?: string;
+            video?: string;
+            timestamp?: string;
+          };
+
+          const messageId = raw.id || snapshot.docs[0].id;
+          const previousId = latestMessageByFriendRef.current.get(friendId);
+          const isInitialSnapshot = previousId === undefined;
+          const isNewMessage = previousId !== messageId;
+          latestMessageByFriendRef.current.set(friendId, messageId);
+
+          const previewText = raw.text || (raw.image ? 'Sent an image' : raw.video ? 'Sent a video' : 'New message');
+          const previewTime = raw.timestamp || new Date().toISOString();
+
+          setFriends((prev) => sortFriendsByRecent(prev.map((friend) => {
+            if (friend.id !== friendId) return friend;
+            return {
+              ...friend,
+              lastMessageId: messageId,
+              lastMessage: previewText,
+              lastMessageAt: previewTime,
+            };
+          })));
+
+          if (isInitialSnapshot || !isNewMessage) return;
+
+          const isIncoming = !!raw.senderId && raw.senderId !== user.id;
+          if (!isIncoming) return;
+
+          const isActiveDirectChat =
+            stateRef.current === 'direct-chat' &&
+            selectedFriendIdRef.current === friendId;
+
+          if (isActiveDirectChat) return;
+
+          let senderName = 'Someone';
+          setFriends((prev) => {
+            const next = sortFriendsByRecent(prev.map((friend) => {
+              if (friend.id !== friendId) return friend;
+              senderName = friend.username;
+              return {
+                ...friend,
+                unreadCount: (friend.unreadCount || 0) + 1,
+              };
+            }));
+            return next;
+          });
+
+          setPendingMessageNotification({
+            senderId: friendId,
+            senderUsername: senderName,
+            text: previewText,
+          });
+          showSystemNotification(`New message from ${senderName}`, previewText);
+        });
+
+        unsubs.push(unsubscribe);
+      });
+    };
+
+    setupListeners();
+
+    return () => {
+      cancelled = true;
+      unsubs.forEach((unsub) => unsub());
+    };
+  }, [user?.id, friends.map((friend) => friend.id).join(',')]);
+
+  useEffect(() => {
+    if (!user) {
+      latestMessageByFriendRef.current.clear();
+    }
+  }, [user?.id]);
+
   // Refresh friend presence snapshot whenever the friend list changes.
   useEffect(() => {
     if (!socket || !user || friends.length === 0) return;
@@ -99,6 +216,9 @@ export default function App() {
   // Handle starting direct chat with a friend
   const handleStartDirectChat = async (friend: Friend) => {
     const isSameFriend = selectedFriend?.id === friend.id;
+    setFriends((prev) => prev.map((f) => (
+      f.id === friend.id ? { ...f, unreadCount: 0 } : f
+    )));
     setSelectedFriend(friend);
     if (!isSameFriend) {
       chat.setMessages([]);
@@ -374,6 +494,7 @@ export default function App() {
             onlineCount={onlineCount}
             user={user}
             friends={friends}
+            totalUnreadCount={totalUnreadCount}
             onStartSearching={startSearching}
             onOpenAuth={() => setIsAuthModalOpen(true)}
             onLogout={handleLogout}
