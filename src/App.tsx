@@ -44,6 +44,7 @@ export default function App() {
   const stateRef = useRef<AppState>(state);
   const selectedFriendIdRef = useRef<string | null>(null);
   const latestMessageByFriendRef = useRef<Map<string, string>>(new Map());
+  const friendNameByIdRef = useRef<Map<string, string>>(new Map());
 
   // Use custom hooks for chat and game state
   const isDirectChat = state === 'direct-chat';
@@ -103,6 +104,14 @@ export default function App() {
     stateRef.current = state;
     selectedFriendIdRef.current = selectedFriend?.id || null;
   }, [state, selectedFriend?.id]);
+
+  useEffect(() => {
+    const nameMap = new Map<string, string>();
+    friends.forEach((friend) => {
+      nameMap.set(friend.id, friend.username);
+    });
+    friendNameByIdRef.current = nameMap;
+  }, [friends]);
 
   // Realtime last-message previews + unread counters for all friends.
   useEffect(() => {
@@ -165,11 +174,10 @@ export default function App() {
 
           if (isActiveDirectChat) return;
 
-          let senderName = 'Someone';
+          const senderName = friendNameByIdRef.current.get(friendId) || 'Unknown user';
           setFriends((prev) => {
             const next = sortFriendsByRecent(prev.map((friend) => {
               if (friend.id !== friendId) return friend;
-              senderName = friend.username;
               return {
                 ...friend,
                 unreadCount: (friend.unreadCount || 0) + 1,
