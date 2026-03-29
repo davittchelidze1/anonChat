@@ -11,8 +11,6 @@ import { getFirestore } from "firebase-admin/firestore";
 import { SERVER_CONFIG } from './server/constants';
 import {
   socketToSession,
-  socketToUser,
-  userToSockets,
   loadData
 } from './server/state';
 import { createAuthMiddleware, getUserFromToken } from './server/middleware/auth';
@@ -121,13 +119,7 @@ async function startServer() {
   // Socket.IO connection handling
   const socketHandlers = new SocketHandlers(io, getUserFromTokenWrapper, firestore);
 
-  // Helper to notify friends about status change
-  const notifyFriendsStatus = (userId: string, isOnline: boolean) => {
-    // This would need access to users map to get friends list
-    // Simplified for now
-  };
-
-  io.on("connection", async (socket) => {
+  io.on("connection", (socket) => {
     const sessionId = socket.handshake.auth.sessionId;
     if (!sessionId) {
       console.log("Connection rejected: No sessionId");
@@ -135,31 +127,6 @@ async function startServer() {
       return;
     }
     socketToSession.set(socket.id, sessionId);
-
-    // Handle authenticated users connecting
-    let token = socket.handshake.auth.token;
-
-    // If no token in auth payload, try to parse from cookie header
-    if (!token && socket.handshake.headers.cookie) {
-      const match = socket.handshake.headers.cookie.match(/(?:^|; )token=([^;]*)/);
-      if (match) {
-        token = match[1];
-      }
-    }
-
-    if (token) {
-      const user = await getUserFromTokenWrapper(token);
-      if (user) {
-        socketToUser.set(socket.id, user.id);
-        const isNew = !userToSockets.has(user.id);
-        if (!userToSockets.has(user.id)) {
-          userToSockets.set(user.id, new Set());
-        }
-        userToSockets.get(user.id)!.add(socket.id);
-        if (isNew) notifyFriendsStatus(user.id, true);
-        console.log("Authenticated user connected:", user.username, "Socket:", socket.id);
-      }
-    }
 
     console.log("User connected:", socket.id, "Session:", sessionId);
     io.emit("online-count", io.engine.clientsCount);
