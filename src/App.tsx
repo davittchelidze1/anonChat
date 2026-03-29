@@ -87,6 +87,15 @@ export default function App() {
     }
   }, [pendingMessageNotification]);
 
+  // Refresh friend presence snapshot whenever the friend list changes.
+  useEffect(() => {
+    if (!socket || !user || friends.length === 0) return;
+    socket.emit(
+      SOCKET_EVENTS.REQUEST_FRIENDS_ONLINE_STATUS,
+      friends.map((friend) => friend.id)
+    );
+  }, [socket, user?.id, friends.map((friend) => friend.id).join(',')]);
+
   // Handle starting direct chat with a friend
   const handleStartDirectChat = async (friend: Friend) => {
     const isSameFriend = selectedFriend?.id === friend.id;

@@ -37,6 +37,8 @@ export const SOCKET_EVENTS = {
   PARTNER_NOT_LOGGED_IN: 'partner-not-logged-in',
   ONLINE_COUNT: 'online-count',
   FRIEND_STATUS: 'friend-status',
+  REQUEST_FRIENDS_ONLINE_STATUS: 'request-friends-online-status',
+  FRIENDS_ONLINE_SNAPSHOT: 'friends-online-snapshot',
 
   // Media sharing events
   REQUEST_MEDIA_PERMISSION: 'request-media-permission',

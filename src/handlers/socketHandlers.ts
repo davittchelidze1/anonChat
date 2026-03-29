@@ -382,6 +382,13 @@ export function setupFriendStatusHandlers(deps: SocketHandlerDependencies) {
       f.id === userId ? { ...f, isOnline } : f
     ));
   });
+
+  socket.on(SOCKET_EVENTS.FRIENDS_ONLINE_SNAPSHOT, (statuses: Record<string, boolean>) => {
+    setFriends((prev) => prev.map((friend) => {
+      if (!(friend.id in statuses)) return friend;
+      return { ...friend, isOnline: Boolean(statuses[friend.id]) };
+    }));
+  });
 }
 
 /**
@@ -417,6 +424,7 @@ export function setupAllSocketHandlers(deps: SocketHandlerDependencies) {
 export function cleanupAllSocketHandlers(socket: Socket) {
   socket.off(SOCKET_EVENTS.CONNECT);
   socket.off(SOCKET_EVENTS.FRIEND_STATUS);
+  socket.off(SOCKET_EVENTS.FRIENDS_ONLINE_SNAPSHOT);
   socket.off(SOCKET_EVENTS.WAITING);
   socket.off(SOCKET_EVENTS.MATCHED);
   socket.off(SOCKET_EVENTS.RECEIVE_MESSAGE);

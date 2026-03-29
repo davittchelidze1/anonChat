@@ -57,7 +57,7 @@ export const useFriends = () => {
             id: friendIds[index],
             username: friendData.username || "Unknown",
             avatarColor: friendData.avatarColor || "zinc",
-            isOnline: false, // Will be updated by socket
+            isOnline: false,
             lastMessage: lastMessage?.text,
             lastMessageAt: lastMessage?.timestamp
           } as Friend;
@@ -88,7 +88,13 @@ export const useFriends = () => {
         return new Date(b.lastMessageAt).getTime() - new Date(a.lastMessageAt).getTime();
       });
 
-      setFriends(sortedFriends);
+      setFriends((prev) => {
+        const prevOnline = new Map(prev.map((friend) => [friend.id, friend.isOnline]));
+        return sortedFriends.map((friend) => ({
+          ...friend,
+          isOnline: prevOnline.get(friend.id) ?? false,
+        }));
+      });
       setRequests(requestsList);
     } catch (e) {
       console.error("Failed to fetch friends", e);

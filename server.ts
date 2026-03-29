@@ -119,7 +119,7 @@ async function startServer() {
   });
 
   // Socket.IO connection handling
-  const socketHandlers = new SocketHandlers(io, getUserFromTokenWrapper);
+  const socketHandlers = new SocketHandlers(io, getUserFromTokenWrapper, firestore);
 
   // Helper to notify friends about status change
   const notifyFriendsStatus = (userId: string, isOnline: boolean) => {

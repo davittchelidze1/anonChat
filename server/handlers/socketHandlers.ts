@@ -4,6 +4,7 @@
  */
 
 import { Server, Socket } from 'socket.io';
+import type { Firestore } from 'firebase-admin/firestore';
 import { Filter } from 'bad-words';
 import {
   activeChats,
@@ -21,18 +22,62 @@ export class SocketHandlers {
 
   constructor(
     private io: Server,
-    private getUserFromToken: (token: string) => Promise<any | null>
+    private getUserFromToken: (token: string) => Promise<any | null>,
+    private firestore: Firestore | null
   ) {
     this.filter = new Filter();
   }
 
   /**
-   * Helper to notify friends about status change
+   * Resolve friend IDs for a user from Firestore.
    */
-  private notifyFriendsStatus(userId: string, isOnline: boolean) {
-    // Note: We need access to users map for friends list
-    // For now, we skip this functionality until we refactor state management
-    // Original implementation would iterate through user's friends and emit to their sockets
+  private async getFriendIds(userId: string): Promise<string[]> {
+    if (!this.firestore) return [];
+
+    try {
+      const userSnap = await this.firestore.collection('users').doc(userId).get();
+      if (!userSnap.exists) return [];
+
+      const userData = userSnap.data() as any;
+      if (!Array.isArray(userData?.friends)) return [];
+
+      return userData.friends.filter((friendId: unknown): friendId is string => typeof friendId === 'string');
+    } catch (error) {
+      console.error('Failed to load friend ids for presence:', error);
+      return [];
+    }
+  }
+
+  /**
+   * Notify all friends of userId about online/offline status.
+   */
+  private async notifyFriendsStatus(userId: string, isOnline: boolean) {
+    const friendIds = await this.getFriendIds(userId);
+    if (friendIds.length === 0) return;
+
+    for (const friendId of friendIds) {
+      const friendSockets = userToSockets.get(friendId);
+      if (!friendSockets) continue;
+
+      friendSockets.forEach((socketId) => {
+        this.io.to(socketId).emit('friend-status', { userId, isOnline });
+      });
+    }
+  }
+
+  /**
+   * Send current online statuses of a user's friends to the given socket.
+   */
+  private async syncFriendStatusesForUser(userId: string, socketId: string) {
+    const friendIds = await this.getFriendIds(userId);
+    if (friendIds.length === 0) return;
+
+    friendIds.forEach((friendId) => {
+      this.io.to(socketId).emit('friend-status', {
+        userId: friendId,
+        isOnline: userToSockets.has(friendId),
+      });
+    });
   }
 
   /**
@@ -93,7 +138,8 @@ export class SocketHandlers {
         if (user) {
           socketToUser.set(socket.id, user.id);
           const isNew = this.addUserSocket(user.id, socket.id);
-          if (isNew) this.notifyFriendsStatus(user.id, true);
+          if (isNew) void this.notifyFriendsStatus(user.id, true);
+          void this.syncFriendStatusesForUser(user.id, socket.id);
 
           // If user authenticated after joining the queue, update queued entry
           // so future matches carry partnerUserId correctly.
@@ -120,7 +166,7 @@ export class SocketHandlers {
         const userId = socketToUser.get(socket.id);
         if (userId) {
           const isOffline = this.removeUserSocket(userId, socket.id);
-          if (isOffline) this.notifyFriendsStatus(userId, false);
+          if (isOffline) void this.notifyFriendsStatus(userId, false);
           socketToUser.delete(socket.id);
 
           // Keep queue state consistent after logout.
@@ -394,6 +440,23 @@ export class SocketHandlers {
   }
 
   /**
+   * Setup presence snapshot handlers.
+   */
+  setupPresenceHandlers(socket: Socket) {
+    socket.on('request-friends-online-status', (friendIds: unknown) => {
+      if (!Array.isArray(friendIds)) return;
+
+      const statuses: Record<string, boolean> = {};
+      friendIds.forEach((friendId) => {
+        if (typeof friendId !== 'string') return;
+        statuses[friendId] = userToSockets.has(friendId);
+      });
+
+      socket.emit('friends-online-snapshot', statuses);
+    });
+  }
+
+  /**
    * Setup disconnect handler
    */
   setupDisconnectHandler(socket: Socket) {
@@ -401,7 +464,7 @@ export class SocketHandlers {
       const userId = socketToUser.get(socket.id);
       if (userId) {
         const isOffline = this.removeUserSocket(userId, socket.id);
-        if (isOffline) this.notifyFriendsStatus(userId, false);
+        if (isOffline) void this.notifyFriendsStatus(userId, false);
         socketToUser.delete(socket.id);
       }
       this.handleDisconnect(socket.id);
@@ -420,6 +483,7 @@ export class SocketHandlers {
     this.setupMediaHandlers(socket);
     this.setupGameHandlers(socket);
     this.setupFriendRequestHandlers(socket);
+    this.setupPresenceHandlers(socket);
     this.setupDisconnectHandler(socket);
   }
 }
