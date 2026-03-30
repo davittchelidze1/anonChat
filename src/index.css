@@ -33,18 +33,22 @@
 
 .glass {
   @apply bg-white/5 backdrop-blur-lg border border-white/10;
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.2);
 }
 
 .message-bubble {
-  @apply px-4 py-2 rounded-2xl max-w-[80%] break-words;
+  @apply px-4 py-2.5 rounded-2xl max-w-[80%] break-words;
+  transition: transform 0.15s ease, box-shadow 0.15s ease;
 }
 
 .message-mine {
   @apply bg-indigo-600 text-white self-end rounded-br-none;
+  box-shadow: 0 2px 12px rgba(99, 102, 241, 0.3);
 }
 
 .message-partner {
   @apply bg-zinc-800 text-zinc-100 self-start rounded-bl-none;
+  box-shadow: 0 2px 12px rgba(0, 0, 0, 0.3);
 }
 
 @keyframes pulse-slow {
@@ -54,4 +58,43 @@
 
 .animate-pulse-slow {
   animation: pulse-slow 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+}
+
+@keyframes shimmer {
+  0% { background-position: -200% center; }
+  100% { background-position: 200% center; }
+}
+
+.animate-shimmer {
+  background-size: 200% 100%;
+  animation: shimmer 3s linear infinite;
+}
+
+@keyframes float {
+  0%, 100% { transform: translateY(0px); }
+  50% { transform: translateY(-10px); }
+}
+
+.animate-float {
+  animation: float 3s ease-in-out infinite;
+}
+
+@keyframes bounce-subtle {
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(-4px); }
+}
+
+.animate-bounce-subtle {
+  animation: bounce-subtle 2s ease-in-out infinite;
+}
+
+/* Smooth transitions for all interactive elements */
+button, a, input, textarea {
+  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+/* Improved focus states */
+input:focus, textarea:focus {
+  outline: none;
+  box-shadow: 0 0 0 2px rgba(99, 102, 241, 0.1), 0 0 0 4px rgba(99, 102, 241, 0.3);
 }

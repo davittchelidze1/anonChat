@@ -601,12 +601,12 @@ export default function App() {
             className="fixed bottom-6 left-1/2 -translate-x-1/2 z-50 w-[90%] max-w-sm bg-zinc-900 border border-indigo-500/30 rounded-2xl p-4 shadow-2xl shadow-indigo-500/20 backdrop-blur-xl"
           >
             <div className="flex items-center gap-4">
-              <div className="w-12 h-12 rounded-xl bg-indigo-600/20 flex items-center justify-center border border-indigo-500/30">
+              <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-indigo-600/30 to-emerald-600/20 flex items-center justify-center border border-indigo-500/40 animate-bounce-subtle">
                 <UserPlus className="w-6 h-6 text-indigo-400" />
               </div>
               <div className="flex-1 min-w-0">
-                <h4 className="font-bold text-sm text-white truncate">New Friend Request</h4>
-                <p className="text-xs text-zinc-400 truncate">{pendingFriendRequest.fromUsername} wants to be friends!</p>
+                <h4 className="font-bold text-sm text-white truncate">Friend Request 🎉</h4>
+                <p className="text-xs text-zinc-400 truncate">{pendingFriendRequest.fromUsername} wants to connect!</p>
               </div>
             </div>
             <div className="flex gap-2 mt-4">
@@ -615,7 +615,7 @@ export default function App() {
                   handleAcceptFriendRequest(pendingFriendRequest.fromId);
                   setPendingFriendRequest(null);
                 }}
-                className="flex-1 py-2 bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-bold uppercase tracking-widest rounded-xl transition-all cursor-pointer"
+                className="flex-1 py-2 bg-gradient-to-r from-indigo-600 to-indigo-500 hover:from-indigo-500 hover:to-indigo-400 text-white text-xs font-bold uppercase tracking-widest rounded-xl transition-all hover:scale-105 active:scale-95 cursor-pointer"
               >
                 Accept
               </button>
@@ -624,7 +624,7 @@ export default function App() {
                   handleDeclineFriendRequest(pendingFriendRequest.fromId);
                   setPendingFriendRequest(null);
                 }}
-                className="flex-1 py-2 bg-zinc-800 hover:bg-zinc-700 text-zinc-400 text-xs font-bold uppercase tracking-widest rounded-xl transition-all cursor-pointer"
+                className="flex-1 py-2 bg-zinc-800 hover:bg-zinc-700 text-zinc-400 hover:text-zinc-300 text-xs font-bold uppercase tracking-widest rounded-xl transition-all hover:scale-105 active:scale-95 cursor-pointer"
               >
                 Decline
               </button>
@@ -642,10 +642,10 @@ export default function App() {
               if (friend) handleStartDirectChat(friend);
               setPendingMessageNotification(null);
             }}
-            className="fixed bottom-6 left-1/2 -translate-x-1/2 z-50 w-[90%] max-w-sm bg-zinc-900 border border-emerald-500/30 rounded-2xl p-4 shadow-2xl shadow-emerald-500/20 backdrop-blur-xl cursor-pointer hover:bg-zinc-800 transition-colors"
+            className="fixed bottom-6 left-1/2 -translate-x-1/2 z-50 w-[90%] max-w-sm bg-zinc-900 border border-emerald-500/30 rounded-2xl p-4 shadow-2xl shadow-emerald-500/20 backdrop-blur-xl cursor-pointer hover:bg-zinc-800 hover:scale-105 transition-all"
           >
             <div className="flex items-center gap-4">
-              <div className="w-12 h-12 rounded-xl bg-emerald-600/20 flex items-center justify-center border border-emerald-500/30">
+              <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-emerald-600/30 to-cyan-600/20 flex items-center justify-center border border-emerald-500/40 animate-bounce-subtle">
                 <MessageSquare className="w-6 h-6 text-emerald-400" />
               </div>
               <div className="flex-1 min-w-0">

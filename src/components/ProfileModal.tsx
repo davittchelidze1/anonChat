@@ -78,10 +78,11 @@ export function ProfileModal({ isOpen, onClose, user, onLogout, friendCount, onU
             exit={{ opacity: 0, scale: 0.9, y: 20 }}
             className="relative w-full max-w-md bg-zinc-900 border border-white/10 rounded-[2.5rem] overflow-hidden shadow-2xl"
           >
-            <div className={`h-32 bg-gradient-to-br from-${user.avatarColor}-600 to-${user.avatarColor}-900 relative`}>
+            <div className={`h-32 bg-gradient-to-br from-${user.avatarColor}-600 to-${user.avatarColor}-900 relative overflow-hidden`}>
+              <div className="absolute inset-0 bg-gradient-to-t from-black/20 to-transparent" />
               <button
                 onClick={onClose}
-                className="absolute top-6 right-6 p-2 bg-black/20 hover:bg-black/40 text-white rounded-full transition-colors cursor-pointer"
+                className="absolute top-6 right-6 p-2 bg-black/30 hover:bg-black/50 text-white rounded-full transition-all hover:scale-110 active:scale-95 cursor-pointer backdrop-blur-sm"
               >
                 <X className="w-5 h-5" />
               </button>
@@ -107,7 +108,7 @@ export function ProfileModal({ isOpen, onClose, user, onLogout, friendCount, onU
                         setUsernameError('');
                         setIsEditingUsername(true);
                       }}
-                      className="text-[10px] uppercase tracking-widest font-bold px-3 py-1.5 rounded-xl bg-indigo-500/10 text-indigo-300 border border-indigo-500/20 hover:bg-indigo-500/20 transition-all cursor-pointer"
+                      className="text-[10px] uppercase tracking-widest font-bold px-3 py-1.5 rounded-xl bg-indigo-500/10 text-indigo-300 border border-indigo-500/20 hover:bg-indigo-500/20 hover:scale-105 active:scale-95 transition-all cursor-pointer"
                     >
                       Edit
                     </button>
@@ -117,9 +118,9 @@ export function ProfileModal({ isOpen, onClose, user, onLogout, friendCount, onU
                     <input
                       value={usernameInput}
                       onChange={(e) => setUsernameInput(sanitizeUsername(e.target.value))}
-                      placeholder="your_username"
+                      placeholder="cool_username"
                       maxLength={24}
-                      className="w-full py-3 px-4 rounded-2xl bg-zinc-950 text-zinc-100 border border-white/10 outline-none focus:border-indigo-500/50"
+                      className="w-full py-3 px-4 rounded-2xl bg-zinc-950 text-zinc-100 border border-white/10 outline-none focus:border-indigo-500/50 hover:border-white/20 transition-all"
                     />
                     {usernameError && (
                       <p className="text-xs text-rose-400">{usernameError}</p>
@@ -128,16 +129,16 @@ export function ProfileModal({ isOpen, onClose, user, onLogout, friendCount, onU
                       <button
                         onClick={saveUsername}
                         disabled={isSavingUsername}
-                        className="flex-1 py-2 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-bold uppercase tracking-widest transition-all cursor-pointer disabled:opacity-60"
+                        className="flex-1 py-2 rounded-xl bg-gradient-to-r from-indigo-600 to-indigo-500 hover:from-indigo-500 hover:to-indigo-400 text-white text-xs font-bold uppercase tracking-widest transition-all hover:scale-105 active:scale-95 cursor-pointer disabled:opacity-60 disabled:cursor-not-allowed"
                       >
                         {isSavingUsername ? 'Saving...' : 'Save'}
                       </button>
                       <button
                         onClick={() => setUsernameInput(buildRandomUsername(user.username || 'anon'))}
                         disabled={isSavingUsername}
-                        className="flex-1 py-2 rounded-xl bg-zinc-800 hover:bg-zinc-700 text-zinc-200 text-xs font-bold uppercase tracking-widest transition-all cursor-pointer disabled:opacity-60"
+                        className="flex-1 py-2 rounded-xl bg-zinc-800 hover:bg-zinc-700 text-zinc-200 text-xs font-bold uppercase tracking-widest transition-all hover:scale-105 active:scale-95 cursor-pointer disabled:opacity-60 disabled:cursor-not-allowed"
                       >
-                        Random
+                        Surprise
                       </button>
                       <button
                         onClick={() => {
@@ -146,7 +147,7 @@ export function ProfileModal({ isOpen, onClose, user, onLogout, friendCount, onU
                           setUsernameInput(user.username || '');
                         }}
                         disabled={isSavingUsername}
-                        className="py-2 px-3 rounded-xl bg-zinc-800 hover:bg-zinc-700 text-zinc-300 text-xs font-bold uppercase tracking-widest transition-all cursor-pointer disabled:opacity-60"
+                        className="py-2 px-3 rounded-xl bg-zinc-800 hover:bg-zinc-700 text-zinc-300 text-xs font-bold uppercase tracking-widest transition-all hover:scale-105 active:scale-95 cursor-pointer disabled:opacity-60 disabled:cursor-not-allowed"
                       >
                         Cancel
                       </button>
@@ -160,27 +161,30 @@ export function ProfileModal({ isOpen, onClose, user, onLogout, friendCount, onU
               </div>
 
               <div className="grid grid-cols-2 gap-4 mb-8">
-                <div className="p-4 bg-white/5 rounded-2xl border border-white/5">
+                <div className="p-4 bg-gradient-to-br from-white/5 to-white/[0.02] rounded-2xl border border-white/5 hover:border-white/10 transition-all">
                   <p className="text-[10px] font-black uppercase tracking-widest text-zinc-500 mb-1">Friends</p>
                   <p className="text-2xl font-bold text-white">{friendCount}</p>
                 </div>
-                <div className="p-4 bg-white/5 rounded-2xl border border-white/5">
+                <div className="p-4 bg-gradient-to-br from-emerald-500/5 to-emerald-500/[0.02] rounded-2xl border border-emerald-500/10 hover:border-emerald-500/20 transition-all">
                   <p className="text-[10px] font-black uppercase tracking-widest text-zinc-500 mb-1">Status</p>
-                  <p className="text-lg font-bold text-emerald-400">Online</p>
+                  <p className="text-lg font-bold text-emerald-400 flex items-center gap-2">
+                    <div className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
+                    Online
+                  </p>
                 </div>
               </div>
 
               <div className="space-y-3">
-                <button 
+                <button
                   onClick={() => {
                     onLogout();
                     onClose();
                   }}
-                  className="w-full flex items-center justify-between p-4 bg-rose-500/10 hover:bg-rose-500/20 text-rose-400 rounded-2xl border border-rose-500/20 transition-all cursor-pointer group"
+                  className="w-full flex items-center justify-between p-4 bg-rose-500/10 hover:bg-rose-500/20 text-rose-400 rounded-2xl border border-rose-500/20 hover:border-rose-500/30 transition-all hover:scale-[1.02] cursor-pointer group"
                 >
                   <div className="flex items-center gap-3">
                     <LogOut className="w-5 h-5" />
-                    <span className="font-bold">Logout</span>
+                    <span className="font-bold">Sign Out</span>
                   </div>
                   <X className="w-4 h-4 opacity-0 group-hover:opacity-100 transition-opacity" />
                 </button>

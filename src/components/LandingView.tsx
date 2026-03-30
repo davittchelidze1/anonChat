@@ -48,7 +48,7 @@ export function LandingView({
             <>
               <button
                 onClick={onOpenFriends}
-                className="relative flex items-center gap-2 px-4 py-2 bg-zinc-900 hover:bg-zinc-800 text-zinc-300 rounded-full text-xs font-bold border border-zinc-800 transition-all cursor-pointer"
+                className="relative flex items-center gap-2 px-4 py-2 bg-zinc-900 hover:bg-zinc-800 text-zinc-300 hover:text-white rounded-full text-xs font-bold border border-zinc-800 hover:border-zinc-700 transition-all cursor-pointer"
               >
                 <Users className="w-4 h-4" />
                 Friends
@@ -73,42 +73,43 @@ export function LandingView({
           ) : (
             <button
               onClick={onOpenAuth}
-              className="flex items-center gap-2 px-4 py-2 bg-indigo-600/10 hover:bg-indigo-600/20 text-indigo-400 rounded-full text-xs font-bold border border-indigo-500/20 transition-all cursor-pointer"
+              className="flex items-center gap-2 px-4 py-2 bg-indigo-600/10 hover:bg-indigo-600/20 text-indigo-400 hover:text-indigo-300 rounded-full text-xs font-bold border border-indigo-500/20 hover:border-indigo-500/40 transition-all cursor-pointer"
             >
               <LogIn className="w-4 h-4" />
-              Login / Register
+              Sign In
             </button>
           )}
         </div>
       </div>
 
-      <div className="mb-8 p-4 rounded-3xl bg-indigo-600/20 border border-indigo-500/30">
-        <MessageSquare className="w-12 h-12 text-indigo-500" />
+      <div className="mb-8 p-4 rounded-3xl bg-indigo-600/20 border border-indigo-500/30 animate-float">
+        <MessageSquare className="w-12 h-12 text-indigo-400" />
       </div>
-      <h1 className="text-4xl sm:text-5xl md:text-7xl font-bold tracking-tighter mb-4 sm:mb-6 bg-gradient-to-b from-white to-zinc-500 bg-clip-text text-transparent">
+      <h1 className="text-4xl sm:text-5xl md:text-7xl font-bold tracking-tighter mb-4 sm:mb-6 bg-gradient-to-b from-white via-zinc-200 to-zinc-500 bg-clip-text text-transparent">
         AnonChat
       </h1>
-      <p className="text-zinc-400 text-base sm:text-lg md:text-xl max-w-md mb-8 sm:mb-12">
-        Chat instantly with strangers. No signup needed. Login only to save friends.
+      <p className="text-zinc-400 text-base sm:text-lg md:text-xl max-w-md mb-8 sm:mb-12 leading-relaxed">
+        Talk to strangers. Make friends. <br />
+        <span className="text-zinc-500 text-sm">No signup required. Login to save the good vibes.</span>
       </p>
       <div className="flex flex-col sm:flex-row items-center justify-center gap-3 sm:gap-4 mb-8 sm:mb-12 w-full max-w-xs sm:max-w-none">
         <button
           onClick={onStartSearching}
-          className="group relative px-6 sm:px-8 py-3.5 sm:py-4 bg-indigo-600 hover:bg-indigo-500 text-white rounded-full font-semibold text-base sm:text-lg transition-all hover:scale-105 active:scale-95 shadow-xl shadow-indigo-500/20 cursor-pointer"
+          className="group relative px-6 sm:px-8 py-3.5 sm:py-4 bg-gradient-to-r from-indigo-600 to-indigo-500 hover:from-indigo-500 hover:to-indigo-400 text-white rounded-full font-semibold text-base sm:text-lg transition-all hover:scale-105 hover:shadow-2xl active:scale-95 shadow-xl shadow-indigo-500/30 cursor-pointer"
         >
-          Start Searching
+          Find Someone Cool
           <div className="absolute inset-0 rounded-full bg-white/20 opacity-0 group-hover:animate-ping pointer-events-none" />
         </button>
         
         {user && (
           <button
             onClick={onOpenFriends}
-            className="relative px-6 sm:px-8 py-3.5 sm:py-4 bg-zinc-900 hover:bg-zinc-800 text-white rounded-full font-semibold text-base sm:text-lg border border-white/10 transition-all hover:scale-105 active:scale-95 cursor-pointer flex items-center gap-2"
+            className="relative px-6 sm:px-8 py-3.5 sm:py-4 bg-zinc-900 hover:bg-zinc-800 text-white rounded-full font-semibold text-base sm:text-lg border border-white/10 hover:border-white/20 transition-all hover:scale-105 hover:shadow-lg active:scale-95 cursor-pointer flex items-center gap-2"
           >
-            <Users className="w-5 h-5 text-indigo-400" />
-            My Friends
+            <Users className="w-5 h-5 text-indigo-400 group-hover:animate-bounce-subtle" />
+            Your Circle
             {totalUnreadCount > 0 && (
-              <span className="absolute -top-2 -right-2 min-w-[20px] h-[20px] px-1 rounded-full bg-rose-500 text-white text-[10px] leading-[20px] text-center font-black">
+              <span className="absolute -top-2 -right-2 min-w-[20px] h-[20px] px-1 rounded-full bg-rose-500 text-white text-[10px] leading-[20px] text-center font-black animate-bounce-subtle">
                 {totalUnreadCount > 99 ? '99+' : totalUnreadCount}
               </span>
             )}
@@ -119,9 +120,9 @@ export function LandingView({
       {user && friends.length > 0 && (
         <div className="w-full max-w-md mx-auto mt-4 text-left animate-in fade-in slide-in-from-bottom-4 duration-700">
           <div className="flex items-center justify-between mb-4 px-2">
-            <h3 className="text-[10px] font-black uppercase tracking-[0.2em] text-zinc-500">Recent Chats</h3>
+            <h3 className="text-[10px] font-black uppercase tracking-[0.2em] text-zinc-500">Recent Vibes</h3>
             <button onClick={onOpenFriends} className="text-[10px] font-black uppercase tracking-[0.2em] text-indigo-500 hover:text-indigo-400 transition-colors cursor-pointer">
-              View All
+              See All
             </button>
           </div>
           <div className="space-y-2">
@@ -129,7 +130,7 @@ export function LandingView({
               <button
                 key={friend.id}
                 onClick={() => onStartChat(friend)}
-                className="w-full flex items-center gap-3 p-3 bg-zinc-900/50 hover:bg-zinc-900 border border-white/5 rounded-2xl transition-all group cursor-pointer"
+                className="w-full flex items-center gap-3 p-3 bg-zinc-900/50 hover:bg-zinc-900 border border-white/5 hover:border-white/10 rounded-2xl transition-all hover:scale-[1.02] group cursor-pointer"
               >
                 <div className={`w-10 h-10 rounded-xl bg-${friend.avatarColor}-500/10 flex items-center justify-center border border-${friend.avatarColor}-500/20`}>
                   <UserIcon className={`w-5 h-5 text-${friend.avatarColor}-400`} />

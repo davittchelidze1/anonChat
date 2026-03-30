@@ -233,16 +233,16 @@ export function AuthModal({ isOpen, onClose, onSuccess }: AuthModalProps) {
             </button>
 
             <div className="mb-8 flex flex-col items-center text-center">
-              <div className="w-16 h-16 rounded-2xl bg-indigo-500/10 flex items-center justify-center border border-indigo-500/20 mb-4">
+              <div className="w-16 h-16 rounded-2xl bg-gradient-to-br from-indigo-500/20 to-emerald-500/20 flex items-center justify-center border border-indigo-500/20 mb-4 animate-float">
                 <User className="w-8 h-8 text-indigo-400" />
               </div>
               <h3 className="text-2xl font-bold tracking-tight mb-2">
-                {step === 'signin' ? 'Sign In to Add Friends' : 'Pick Your Username'}
+                {step === 'signin' ? 'Join the Party' : 'Pick Your Name'}
               </h3>
               <p className="text-zinc-500 text-sm">
                 {step === 'signin'
-                  ? 'Keep chatting as a guest, or login with Google to save friends and conversations'
-                  : 'Use a simple username, or choose a quick random one based on your email name.'}
+                  ? 'Continue as a ghost, or sign in to save your friends & chats'
+                  : 'Choose something memorable — or let us surprise you'}
               </p>
             </div>
 
@@ -255,7 +255,7 @@ export function AuthModal({ isOpen, onClose, onSuccess }: AuthModalProps) {
                 <button
                   onClick={handleGoogleLogin}
                   disabled={isLoading}
-                  className="w-full py-4 rounded-2xl bg-white hover:bg-zinc-200 text-black font-bold transition-all shadow-lg flex items-center justify-center gap-3 cursor-pointer"
+                  className="w-full py-4 rounded-2xl bg-white hover:bg-zinc-100 text-black font-bold transition-all hover:scale-[1.02] hover:shadow-xl active:scale-[0.98] shadow-lg flex items-center justify-center gap-3 cursor-pointer disabled:opacity-60 disabled:cursor-not-allowed"
                 >
                   {isLoading ? <Loader2 className="w-5 h-5 animate-spin" /> : (
                     <>
@@ -265,7 +265,7 @@ export function AuthModal({ isOpen, onClose, onSuccess }: AuthModalProps) {
                         <path fill="#FBBC05" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z" />
                         <path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z" />
                       </svg>
-                      Continue with Google
+                      Sign in with Google
                     </>
                   )}
                 </button>
@@ -274,17 +274,17 @@ export function AuthModal({ isOpen, onClose, onSuccess }: AuthModalProps) {
                   <input
                     value={usernameInput}
                     onChange={(e) => setUsernameInput(sanitizeUsername(e.target.value))}
-                    placeholder="your_username"
+                    placeholder="cool_username"
                     maxLength={24}
-                    className="w-full py-3 px-4 rounded-2xl bg-zinc-900 text-zinc-100 border border-white/10 outline-none focus:border-indigo-500/50"
+                    className="w-full py-3 px-4 rounded-2xl bg-zinc-900 text-zinc-100 border border-white/10 outline-none focus:border-indigo-500/50 hover:border-white/20 transition-all"
                   />
 
                   <button
                     onClick={() => finalizeNewUser(usernameInput)}
                     disabled={isLoading}
-                    className="w-full py-3 rounded-2xl bg-indigo-600 hover:bg-indigo-500 text-white font-bold transition-all cursor-pointer disabled:opacity-60"
+                    className="w-full py-3 rounded-2xl bg-gradient-to-r from-indigo-600 to-indigo-500 hover:from-indigo-500 hover:to-indigo-400 text-white font-bold transition-all hover:scale-[1.02] hover:shadow-lg active:scale-[0.98] cursor-pointer disabled:opacity-60 disabled:cursor-not-allowed"
                   >
-                    {isLoading ? 'Saving...' : 'Continue'}
+                    {isLoading ? 'Creating...' : 'Let\'s Go'}
                   </button>
 
                   <button
@@ -298,9 +298,9 @@ export function AuthModal({ isOpen, onClose, onSuccess }: AuthModalProps) {
                       finalizeNewUser(refreshedRandom);
                     }}
                     disabled={isLoading}
-                    className="w-full py-3 rounded-2xl bg-zinc-900 hover:bg-zinc-800 text-zinc-200 font-semibold border border-white/10 transition-all cursor-pointer disabled:opacity-60"
+                    className="w-full py-3 rounded-2xl bg-zinc-900 hover:bg-zinc-800 text-zinc-200 font-semibold border border-white/10 hover:border-white/20 transition-all hover:scale-[1.02] cursor-pointer disabled:opacity-60 disabled:cursor-not-allowed"
                   >
-                    {isLoading ? 'Please wait...' : `Quick random (${quickUsername || 'generate'})`}
+                    {isLoading ? 'Rolling dice...' : `Surprise me (${quickUsername || 'generate'})`}
                   </button>
                 </>
               )}
