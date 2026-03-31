@@ -216,30 +216,30 @@ export function AuthModal({ isOpen, onClose, onSuccess }: AuthModalProps) {
   return (
     <AnimatePresence>
       {isOpen && (
-        <div className="fixed inset-0 z-[200] flex items-center justify-center p-4 bg-black/80 backdrop-blur-md">
+        <div className="fixed inset-0 z-[200] flex items-center justify-center p-4 bg-purple-900/40 backdrop-blur-md">
           <motion.div
             initial={{ opacity: 0, scale: 0.9, y: 20 }}
             animate={{ opacity: 1, scale: 1, y: 0 }}
             exit={{ opacity: 0, scale: 0.9, y: 20 }}
-            className="bg-zinc-950 border border-white/10 rounded-[2.5rem] p-8 max-w-sm w-full shadow-2xl relative overflow-hidden"
+            className="bg-white border-2 border-purple-200 rounded-[2.5rem] p-8 max-w-sm w-full shadow-2xl relative overflow-hidden"
           >
-            <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-indigo-500 via-emerald-500 to-indigo-500" />
+            <div className="absolute top-0 left-0 w-full h-2 bg-gradient-to-r from-purple-500 via-pink-500 to-purple-500" />
             
             <button
               onClick={handleClose}
-              className="absolute top-6 right-6 p-2 text-zinc-500 hover:text-white hover:bg-white/5 rounded-full transition-all cursor-pointer"
+              className="absolute top-6 right-6 p-2 text-slate-500 hover:text-pink-600 hover:bg-pink-100 rounded-full transition-all cursor-pointer"
             >
               <X className="w-5 h-5" />
             </button>
 
             <div className="mb-8 flex flex-col items-center text-center">
-              <div className="w-16 h-16 rounded-2xl bg-gradient-to-br from-indigo-500/20 to-emerald-500/20 flex items-center justify-center border border-indigo-500/20 mb-4 animate-float">
-                <User className="w-8 h-8 text-indigo-400" />
+              <div className="w-16 h-16 rounded-2xl bg-gradient-to-br from-purple-200 to-pink-200 flex items-center justify-center border-2 border-purple-300 mb-4 animate-float shadow-lg">
+                <User className="w-8 h-8 text-purple-600" />
               </div>
-              <h3 className="text-2xl font-bold tracking-tight mb-2">
-                {step === 'signin' ? 'Join the Party' : 'Pick Your Name'}
+              <h3 className="text-2xl font-bold tracking-tight mb-2 text-slate-800">
+                {step === 'signin' ? 'Join the Party 🎉' : 'Pick Your Name ✨'}
               </h3>
-              <p className="text-zinc-500 text-sm">
+              <p className="text-slate-600 text-sm">
                 {step === 'signin'
                   ? 'Continue as a ghost, or sign in to save your friends & chats'
                   : 'Choose something memorable — or let us surprise you'}
@@ -248,16 +248,16 @@ export function AuthModal({ isOpen, onClose, onSuccess }: AuthModalProps) {
 
             <div className="space-y-4">
               {error && (
-                <p className="text-rose-500 text-xs text-center font-medium">{error}</p>
+                <p className="text-pink-600 text-xs text-center font-semibold bg-pink-100 py-2 px-4 rounded-xl border border-pink-300">{error}</p>
               )}
 
               {step === 'signin' ? (
                 <button
                   onClick={handleGoogleLogin}
                   disabled={isLoading}
-                  className="w-full py-4 rounded-2xl bg-white hover:bg-zinc-100 text-black font-bold transition-all hover:scale-[1.02] hover:shadow-xl active:scale-[0.98] shadow-lg flex items-center justify-center gap-3 cursor-pointer disabled:opacity-60 disabled:cursor-not-allowed"
+                  className="w-full py-4 rounded-2xl bg-white hover:bg-slate-50 text-slate-800 font-bold transition-all hover:scale-[1.02] hover:shadow-xl active:scale-[0.98] shadow-lg border-2 border-slate-200 flex items-center justify-center gap-3 cursor-pointer disabled:opacity-60 disabled:cursor-not-allowed"
                 >
-                  {isLoading ? <Loader2 className="w-5 h-5 animate-spin" /> : (
+                  {isLoading ? <Loader2 className="w-5 h-5 animate-spin text-purple-600" /> : (
                     <>
                       <svg className="w-5 h-5" viewBox="0 0 24 24">
                         <path fill="currentColor" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" />
@@ -276,15 +276,15 @@ export function AuthModal({ isOpen, onClose, onSuccess }: AuthModalProps) {
                     onChange={(e) => setUsernameInput(sanitizeUsername(e.target.value))}
                     placeholder="cool_username"
                     maxLength={24}
-                    className="w-full py-3 px-4 rounded-2xl bg-zinc-900 text-zinc-100 border border-white/10 outline-none focus:border-indigo-500/50 hover:border-white/20 transition-all"
+                    className="w-full py-3 px-4 rounded-2xl bg-white text-slate-800 border-2 border-purple-200 outline-none focus:border-purple-500 hover:border-purple-300 transition-all shadow-sm"
                   />
 
                   <button
                     onClick={() => finalizeNewUser(usernameInput)}
                     disabled={isLoading}
-                    className="w-full py-3 rounded-2xl bg-gradient-to-r from-indigo-600 to-indigo-500 hover:from-indigo-500 hover:to-indigo-400 text-white font-bold transition-all hover:scale-[1.02] hover:shadow-lg active:scale-[0.98] cursor-pointer disabled:opacity-60 disabled:cursor-not-allowed"
+                    className="w-full py-3 rounded-2xl bg-gradient-to-r from-purple-500 to-pink-500 hover:from-purple-600 hover:to-pink-600 text-white font-bold transition-all hover:scale-[1.02] hover:shadow-lg active:scale-[0.98] cursor-pointer disabled:opacity-60 disabled:cursor-not-allowed shadow-md"
                   >
-                    {isLoading ? 'Creating...' : 'Let\'s Go'}
+                    {isLoading ? 'Creating...' : 'Let\'s Go 🚀'}
                   </button>
 
                   <button
@@ -298,9 +298,9 @@ export function AuthModal({ isOpen, onClose, onSuccess }: AuthModalProps) {
                       finalizeNewUser(refreshedRandom);
                     }}
                     disabled={isLoading}
-                    className="w-full py-3 rounded-2xl bg-zinc-900 hover:bg-zinc-800 text-zinc-200 font-semibold border border-white/10 hover:border-white/20 transition-all hover:scale-[1.02] cursor-pointer disabled:opacity-60 disabled:cursor-not-allowed"
+                    className="w-full py-3 rounded-2xl bg-white hover:bg-slate-100 text-slate-800 font-semibold border-2 border-slate-200 hover:border-purple-300 transition-all hover:scale-[1.02] cursor-pointer disabled:opacity-60 disabled:cursor-not-allowed shadow-sm"
                   >
-                    {isLoading ? 'Rolling dice...' : `Surprise me (${quickUsername || 'generate'})`}
+                    {isLoading ? 'Rolling dice... 🎲' : `Surprise me 🎲 (${quickUsername || 'generate'})`}
                   </button>
                 </>
               )}

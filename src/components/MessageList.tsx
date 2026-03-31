@@ -73,7 +73,7 @@ export function MessageList({
   }, [activeReactionId]);
 
   return (
-    <main className="flex-1 overflow-y-auto px-4 sm:px-6 py-6 sm:py-10 space-y-4 sm:space-y-6 scrollbar-hide bg-zinc-950">
+    <main className="flex-1 overflow-y-auto px-4 sm:px-6 py-6 sm:py-10 space-y-4 sm:space-y-6 scrollbar-hide">
       <div className="max-w-5xl mx-auto space-y-4 sm:space-y-6">
         <AnimatePresence initial={false}>
           {messages.map((msg, i) => {
@@ -93,20 +93,20 @@ export function MessageList({
                   key={msg.id || i}
                   className="flex flex-col items-center gap-2 my-4"
                 >
-                  <span className="px-4 py-1.5 bg-zinc-900/50 backdrop-blur-sm border border-white/5 rounded-full text-[11px] font-medium text-zinc-500 shadow-sm">
+                  <span className="px-4 py-1.5 bg-white/70 backdrop-blur-sm border border-purple-200 rounded-full text-[11px] font-semibold text-slate-600 shadow-sm">
                     {msg.text}
                   </span>
                   {isFriendRequest && fromPartner && (
                     <div className="flex gap-2">
                       <button
                         onClick={() => onAcceptFriend(partnerUserId)}
-                        className="px-4 py-1 bg-indigo-600 hover:bg-indigo-500 text-white text-[10px] font-bold uppercase tracking-widest rounded-full transition-all cursor-pointer shadow-lg shadow-indigo-600/20"
+                        className="px-4 py-1 bg-gradient-to-r from-purple-500 to-pink-500 hover:from-purple-600 hover:to-pink-600 text-white text-[10px] font-bold uppercase tracking-widest rounded-full transition-all cursor-pointer shadow-lg shadow-purple-500/30"
                       >
                         Accept
                       </button>
                       <button
                         onClick={() => onDeclineFriend(partnerUserId)}
-                        className="px-4 py-1 bg-zinc-800 hover:bg-zinc-700 text-zinc-300 text-[10px] font-bold uppercase tracking-widest rounded-full transition-all cursor-pointer"
+                        className="px-4 py-1 bg-slate-200 hover:bg-slate-300 text-slate-700 text-[10px] font-bold uppercase tracking-widest rounded-full transition-all cursor-pointer"
                       >
                         Decline
                       </button>
@@ -128,8 +128,8 @@ export function MessageList({
                 className={`flex ${isMe ? 'justify-end' : 'justify-start'} items-end gap-3`}
               >
                 {!isMe && (
-                  <div className={`w-8 h-8 rounded-full flex-shrink-0 flex items-center justify-center transition-all ${showAvatar ? `bg-${partnerColor}-500/10 ring-1 ring-${partnerColor}-500/30` : 'opacity-0'}`}>
-                    {showAvatar && <User className={`w-4 h-4 text-${partnerColor}-400`} />}
+                  <div className={`w-8 h-8 rounded-full flex-shrink-0 flex items-center justify-center transition-all ${showAvatar ? `bg-${partnerColor}-100 ring-2 ring-${partnerColor}-300 shadow-sm` : 'opacity-0'}`}>
+                    {showAvatar && <User className={`w-4 h-4 text-${partnerColor}-600`} />}
                   </div>
                 )}
 
@@ -145,12 +145,12 @@ export function MessageList({
                     onTouchStart={() => !isSystem && handleLongPressStart(msg.id)}
                     onTouchEnd={handleLongPressEnd}
                     className={cn(
-                      "p-3 sm:p-4 rounded-2xl text-[15px] leading-relaxed shadow-sm transition-all relative cursor-pointer",
+                      "p-3 sm:p-4 rounded-2xl text-[15px] leading-relaxed shadow-md transition-all relative cursor-pointer",
                       isMe
-                        ? "bg-indigo-600 text-white rounded-br-sm"
-                        : "bg-zinc-800 text-zinc-100 rounded-bl-sm",
-                      hasMedia && msg.maxViews && "border-2 border-indigo-500/30",
-                      activeReactionId === msg.id && "ring-2 ring-indigo-400 ring-offset-2 ring-offset-zinc-950 z-50"
+                        ? "text-white rounded-br-sm message-mine"
+                        : "text-slate-800 rounded-bl-sm message-partner",
+                      hasMedia && msg.maxViews && "border-2 border-purple-300",
+                      activeReactionId === msg.id && "ring-2 ring-purple-500 ring-offset-2 ring-offset-white z-50"
                     )}
                   >
                     {/* Reaction Menu */}
@@ -161,7 +161,7 @@ export function MessageList({
                           animate={{ opacity: 1, y: 0, scale: 1 }}
                           exit={{ opacity: 0, y: 10, scale: 0.9 }}
                           className={cn(
-                            "absolute z-50 bg-zinc-900 border border-white/10 rounded-full p-1 shadow-2xl flex gap-1 reaction-menu",
+                            "absolute z-50 bg-white border-2 border-purple-200 rounded-full p-1 shadow-2xl flex gap-1 reaction-menu",
                             isMe ? "right-0 -top-12" : "left-0 -top-12"
                           )}
                         >
@@ -173,7 +173,7 @@ export function MessageList({
                                 onReaction(msg.id, emoji);
                                 setActiveReactionId(null);
                               }}
-                              className="w-8 h-8 flex items-center justify-center hover:bg-white/10 rounded-full transition-colors text-lg cursor-pointer"
+                              className="w-8 h-8 flex items-center justify-center hover:bg-purple-100 rounded-full transition-colors text-lg cursor-pointer"
                             >
                               {emoji}
                             </button>
@@ -183,7 +183,7 @@ export function MessageList({
                     </AnimatePresence>
 
                     {hasMedia && isViewed ? (
-                      <div className="flex items-center gap-3 py-2 px-4 bg-black/20 rounded-xl text-zinc-500 italic text-sm">
+                      <div className="flex items-center gap-3 py-2 px-4 bg-slate-100 rounded-xl text-slate-500 italic text-sm">
                         <LogOut className="w-4 h-4 opacity-50" />
                         Media expired
                       </div>
@@ -252,18 +252,18 @@ export function MessageList({
                         {Object.entries(msg.reactions).map(([emoji, count]) => (
                           <div
                             key={emoji}
-                            className="bg-black/20 backdrop-blur-sm border border-white/5 rounded-full px-2 py-0.5 flex items-center gap-1 text-[10px] font-bold"
+                            className="bg-white/60 backdrop-blur-sm border border-purple-200 rounded-full px-2 py-0.5 flex items-center gap-1 text-[10px] font-bold shadow-sm"
                           >
                             <span>{emoji}</span>
-                            <span className="text-zinc-400">{count}</span>
+                            <span className="text-slate-600">{count}</span>
                           </div>
                         ))}
                       </div>
                     )}
                   </div>
-                  <div className={`mt-1.5 flex items-center gap-1.5 opacity-60 text-[10px] font-medium text-zinc-500 ${isMe ? 'flex-row-reverse' : 'flex-row'}`}>
+                  <div className={`mt-1.5 flex items-center gap-1.5 opacity-70 text-[10px] font-medium text-slate-500 ${isMe ? 'flex-row-reverse' : 'flex-row'}`}>
                     {hasMedia && msg.maxViews && (
-                      <span className="flex items-center gap-1 text-indigo-400 font-bold uppercase tracking-tighter">
+                      <span className="flex items-center gap-1 text-purple-600 font-bold uppercase tracking-tighter">
                         <LogOut className="w-3 h-3" />
                         {isViewed ? 'Opened' : 'View Twice'}
                       </span>
@@ -283,14 +283,14 @@ export function MessageList({
             animate={{ opacity: 1, x: 0 }}
             className="flex items-center gap-4"
           >
-            <div className={`w-10 h-10 rounded-xl bg-${partnerColor}-500/10 border border-${partnerColor}-500/20 flex items-center justify-center shadow-lg`}>
-              <User className={`w-5 h-5 text-${partnerColor}-400/50`} />
+            <div className={`w-10 h-10 rounded-xl bg-${partnerColor}-100 border border-${partnerColor}-300 flex items-center justify-center shadow-lg`}>
+              <User className={`w-5 h-5 text-${partnerColor}-600`} />
             </div>
-            <div className="bg-zinc-900/50 backdrop-blur-md border border-white/10 px-5 py-3 rounded-3xl rounded-bl-none shadow-xl">
+            <div className="bg-white/70 backdrop-blur-md border-2 border-purple-200 px-5 py-3 rounded-3xl rounded-bl-none shadow-xl">
               <div className="flex gap-1.5">
-                <motion.span animate={{ scale: [1, 1.2, 1] }} transition={{ repeat: Infinity, duration: 1, delay: 0 }} className="w-2 h-2 bg-zinc-600 rounded-full" />
-                <motion.span animate={{ scale: [1, 1.2, 1] }} transition={{ repeat: Infinity, duration: 1, delay: 0.2 }} className="w-2 h-2 bg-zinc-600 rounded-full" />
-                <motion.span animate={{ scale: [1, 1.2, 1] }} transition={{ repeat: Infinity, duration: 1, delay: 0.4 }} className="w-2 h-2 bg-zinc-600 rounded-full" />
+                <motion.span animate={{ scale: [1, 1.2, 1] }} transition={{ repeat: Infinity, duration: 1, delay: 0 }} className="w-2 h-2 bg-purple-500 rounded-full" />
+                <motion.span animate={{ scale: [1, 1.2, 1] }} transition={{ repeat: Infinity, duration: 1, delay: 0.2 }} className="w-2 h-2 bg-pink-500 rounded-full" />
+                <motion.span animate={{ scale: [1, 1.2, 1] }} transition={{ repeat: Infinity, duration: 1, delay: 0.4 }} className="w-2 h-2 bg-cyan-500 rounded-full" />
               </div>
             </div>
           </motion.div>
