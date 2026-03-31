@@ -59,9 +59,9 @@ export function WaitingView({ onStopChat, onlineCount }: WaitingViewProps) {
       </div>
 
       <div className="relative mb-8 z-10">
-        <div className="absolute inset-0 bg-purple-400/30 blur-3xl rounded-full animate-pulse" />
-        <div className="w-24 h-24 bg-gradient-to-br from-purple-100 to-pink-100 rounded-full flex items-center justify-center border-4 border-purple-400 shadow-2xl shadow-purple-500/40 relative">
-          <Loader2 className="w-12 h-12 text-purple-600 animate-spin" />
+        <div className="absolute inset-0 bg-purple-500/30 blur-3xl rounded-full animate-pulse" />
+        <div className="w-24 h-24 bg-gradient-to-br from-purple-600/30 to-pink-600/30 rounded-full flex items-center justify-center border-4 border-purple-400/40 shadow-2xl shadow-purple-500/20 relative">
+          <Loader2 className="w-12 h-12 text-purple-300 animate-spin" />
         </div>
       </div>
 
@@ -70,23 +70,23 @@ export function WaitingView({ onStopChat, onlineCount }: WaitingViewProps) {
         initial={{ opacity: 0, y: 10 }}
         animate={{ opacity: 1, y: 0 }}
         exit={{ opacity: 0, y: -10 }}
-        className="text-3xl font-bold mb-2 tracking-tight bg-gradient-to-r from-purple-600 via-pink-600 to-purple-600 bg-clip-text text-transparent"
+        className="text-3xl font-bold mb-2 tracking-tight bg-gradient-to-r from-purple-400 via-pink-400 to-purple-400 bg-clip-text text-transparent"
       >
         {PLAYFUL_MESSAGES[messageIndex]}{dots}
       </motion.h2>
-      <p className="text-slate-600 mb-8 max-w-xs mx-auto font-medium">
+      <p className="text-slate-300 mb-8 max-w-xs mx-auto font-medium">
         {onlineCount > 0 ? `Scanning ${onlineCount} people online 🔍` : 'This should only take a moment ⏱️'}
       </p>
 
       <button
         onClick={onStopChat}
-        className="group flex items-center gap-2 px-6 py-3 bg-white hover:bg-slate-100 border-2 border-slate-200 hover:border-pink-300 rounded-full transition-all text-slate-600 hover:text-pink-600 hover:shadow-lg cursor-pointer"
+        className="group flex items-center gap-2 px-6 py-3 bg-slate-800/50 hover:bg-slate-800/70 border-2 border-slate-600/30 hover:border-pink-500/40 rounded-full transition-all text-slate-300 hover:text-pink-300 hover:shadow-lg cursor-pointer"
       >
         <X className="w-4 h-4" />
         <span className="font-semibold">Changed My Mind</span>
       </button>
 
-      <div className="absolute bottom-8 text-xs text-purple-500 font-semibold animate-pulse-slow">
+      <div className="absolute bottom-8 text-xs text-purple-400 font-semibold animate-pulse-slow">
         usually takes &lt; 5 seconds ⚡
       </div>
     </motion.div>
