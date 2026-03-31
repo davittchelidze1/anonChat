@@ -8,8 +8,8 @@
 @layer base {
   html, body {
     @apply antialiased overflow-hidden fixed inset-0;
-    /* Warm, cozy dark gradient - pleasant for long usage */
-    background: linear-gradient(135deg, #1e1b4b 0%, #312e81 25%, #4c1d95 50%, #581c87 75%, #3b1f47 100%);
+    /* Soft, modern gradient background - comfortable for long chat sessions */
+    background: linear-gradient(135deg, #0f172a 0%, #1e1b4b 35%, #312e81 70%, #1e1b4b 100%);
     color: #e2e8f0;
     height: 100dvh;
     width: 100vw;
