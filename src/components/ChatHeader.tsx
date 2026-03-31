@@ -43,34 +43,34 @@ export function ChatHeader({
   const [showGameMenu, setShowGameMenu] = useState(false);
 
   return (
-    <header className="flex items-center justify-between px-4 sm:px-8 py-3 sm:py-5 border-b-2 border-purple-100 bg-white/80 backdrop-blur-2xl z-20 sticky top-0 shadow-sm">
+    <header className="flex items-center justify-between px-4 sm:px-8 py-3 sm:py-5 border-b-2 border-purple-500/20 bg-slate-900/60 backdrop-blur-2xl z-20 sticky top-0 shadow-sm">
       <div className="flex items-center gap-3 sm:gap-5">
         {isDirectChat && (
           <button
             onClick={onStopChat}
-            className="p-2 hover:bg-purple-100 rounded-full transition-colors cursor-pointer mr-1"
+            className="p-2 hover:bg-purple-500/20 rounded-full transition-colors cursor-pointer mr-1"
           >
-            <ArrowLeft className="w-5 h-5 text-slate-600" />
+            <ArrowLeft className="w-5 h-5 text-slate-300" />
           </button>
         )}
         <div className="relative">
-          <div className={`w-10 h-10 sm:w-12 sm:h-12 rounded-2xl bg-${partnerColor}-100 flex items-center justify-center border-2 border-${partnerColor}-300 rotate-3 transition-transform hover:rotate-0 shadow-md`}>
-            <User className={`w-5 h-5 sm:w-6 sm:h-6 text-${partnerColor}-600`} />
+          <div className={`w-10 h-10 sm:w-12 sm:h-12 rounded-2xl bg-${partnerColor}-900/50 flex items-center justify-center border-2 border-${partnerColor}-500/30 rotate-3 transition-transform hover:rotate-0 shadow-md`}>
+            <User className={`w-5 h-5 sm:w-6 sm:h-6 text-${partnerColor}-400`} />
           </div>
           {isPartnerOnline && (
-            <div className="absolute -bottom-1 -right-1 w-3 h-3 sm:w-4 sm:h-4 bg-emerald-500 border-2 sm:border-4 border-white rounded-full shadow-lg shadow-emerald-400/50" />
+            <div className="absolute -bottom-1 -right-1 w-3 h-3 sm:w-4 sm:h-4 bg-emerald-500 border-2 sm:border-4 border-slate-900 rounded-full shadow-lg shadow-emerald-400/50" />
           )}
         </div>
         <div>
-          <h2 className="font-bold text-base sm:text-lg text-slate-800 tracking-tight truncate max-w-[100px] sm:max-w-none">{partnerAlias}</h2>
+          <h2 className="font-bold text-base sm:text-lg text-slate-100 tracking-tight truncate max-w-[100px] sm:max-w-none">{partnerAlias}</h2>
           <div className="flex items-center gap-2">
-            <span className="text-[8px] sm:text-[10px] uppercase tracking-[0.2em] font-black text-purple-600">
+            <span className="text-[8px] sm:text-[10px] uppercase tracking-[0.2em] font-black text-purple-400">
               {isDirectChat ? 'Friend' : 'Stranger'}
             </span>
-            <div className="w-1 h-1 rounded-full bg-slate-300" />
+            <div className="w-1 h-1 rounded-full bg-slate-600" />
             <span className={cn(
               "text-[8px] sm:text-[10px] uppercase tracking-[0.2em] font-black",
-              isPartnerOnline ? "text-emerald-600" : "text-slate-500"
+              isPartnerOnline ? "text-emerald-400" : "text-slate-500"
             )}>
               {isPartnerOnline ? 'Live' : 'Offline'}
             </span>
@@ -81,7 +81,7 @@ export function ChatHeader({
         {!isDirectChat && !user && onOpenAuth && (
           <button
             onClick={onOpenAuth}
-            className="flex items-center gap-1.5 sm:gap-2 px-2.5 sm:px-3 py-1.5 sm:py-2 bg-gradient-to-r from-purple-100 to-pink-100 hover:from-purple-200 hover:to-pink-200 rounded-xl transition-all text-[10px] sm:text-xs font-bold uppercase tracking-widest text-purple-700 border-2 border-purple-300 cursor-pointer shadow-sm"
+            className="flex items-center gap-1.5 sm:gap-2 px-2.5 sm:px-3 py-1.5 sm:py-2 bg-gradient-to-r from-purple-600/40 to-pink-600/40 hover:from-purple-600/60 hover:to-pink-600/60 rounded-xl transition-all text-[10px] sm:text-xs font-bold uppercase tracking-widest text-purple-200 border-2 border-purple-500/30 cursor-pointer shadow-sm"
           >
             <LogIn className="w-3.5 h-3.5 sm:w-4 h-4" />
             <span className="hidden xs:inline">Login</span>
@@ -90,7 +90,7 @@ export function ChatHeader({
         {!isDirectChat && (!partnerUserId || !friends.some(f => f.id === partnerUserId)) && (
           <button
             onClick={onAddFriend}
-            className="flex items-center gap-2 px-3 sm:px-4 py-2 bg-gradient-to-r from-emerald-100 to-cyan-100 hover:from-emerald-200 hover:to-cyan-200 rounded-xl transition-all text-[10px] sm:text-xs font-bold uppercase tracking-widest text-emerald-700 border-2 border-emerald-300 cursor-pointer shadow-sm"
+            className="flex items-center gap-2 px-3 sm:px-4 py-2 bg-gradient-to-r from-emerald-600/40 to-cyan-600/40 hover:from-emerald-600/60 hover:to-cyan-600/60 rounded-xl transition-all text-[10px] sm:text-xs font-bold uppercase tracking-widest text-emerald-200 border-2 border-emerald-500/30 cursor-pointer shadow-sm"
           >
             <UserPlus className="w-3.5 h-3.5 sm:w-4 h-4" />
             <span className="hidden sm:inline">
@@ -102,7 +102,7 @@ export function ChatHeader({
         <div className="relative">
           <button
             onClick={() => setShowGameMenu(!showGameMenu)}
-            className="flex items-center gap-2 px-3 sm:px-4 py-2 bg-gradient-to-r from-purple-100 to-pink-100 hover:from-purple-200 hover:to-pink-200 rounded-xl transition-all text-[10px] sm:text-xs font-bold uppercase tracking-widest text-purple-700 border-2 border-purple-300 cursor-pointer shadow-sm"
+            className="flex items-center gap-2 px-3 sm:px-4 py-2 bg-gradient-to-r from-purple-600/40 to-pink-600/40 hover:from-purple-600/60 hover:to-pink-600/60 rounded-xl transition-all text-[10px] sm:text-xs font-bold uppercase tracking-widest text-purple-200 border-2 border-purple-500/30 cursor-pointer shadow-sm"
           >
             <Gamepad2 className="w-3.5 h-3.5 sm:w-4 h-4" />
             <span className="hidden sm:inline">Play</span>
@@ -114,27 +114,27 @@ export function ChatHeader({
                 initial={{ opacity: 0, y: 10, scale: 0.95 }}
                 animate={{ opacity: 1, y: 0, scale: 1 }}
                 exit={{ opacity: 0, y: 10, scale: 0.95 }}
-                className="absolute right-0 mt-2 w-48 bg-white border-2 border-purple-200 rounded-2xl shadow-2xl overflow-hidden z-50"
+                className="absolute right-0 mt-2 w-48 bg-slate-800/95 backdrop-blur-lg border-2 border-purple-500/30 rounded-2xl shadow-2xl overflow-hidden z-50"
               >
                 <button
                   onClick={() => { onGameInvite('tictactoe'); setShowGameMenu(false); }}
-                  className="w-full px-4 py-3 text-left text-xs font-bold uppercase tracking-widest text-slate-600 hover:text-purple-700 hover:bg-purple-50 transition-colors flex items-center gap-3 cursor-pointer"
+                  className="w-full px-4 py-3 text-left text-xs font-bold uppercase tracking-widest text-slate-300 hover:text-purple-300 hover:bg-purple-500/20 transition-colors flex items-center gap-3 cursor-pointer"
                 >
-                  <Trophy className="w-4 h-4 text-purple-600" />
+                  <Trophy className="w-4 h-4 text-purple-400" />
                   Tic-Tac-Toe
                 </button>
                 <button
                   onClick={() => { onGameInvite('rps'); setShowGameMenu(false); }}
-                  className="w-full px-4 py-3 text-left text-xs font-bold uppercase tracking-widest text-slate-600 hover:text-emerald-700 hover:bg-emerald-50 transition-colors flex items-center gap-3 cursor-pointer"
+                  className="w-full px-4 py-3 text-left text-xs font-bold uppercase tracking-widest text-slate-300 hover:text-emerald-300 hover:bg-emerald-500/20 transition-colors flex items-center gap-3 cursor-pointer"
                 >
-                  <Trophy className="w-4 h-4 text-emerald-600" />
+                  <Trophy className="w-4 h-4 text-emerald-400" />
                   Rock Paper Scissors
                 </button>
                 <button
                   onClick={() => { onGameInvite('doodle'); setShowGameMenu(false); }}
-                  className="w-full px-4 py-3 text-left text-xs font-bold uppercase tracking-widest text-slate-600 hover:text-pink-700 hover:bg-pink-50 transition-colors flex items-center gap-3 cursor-pointer"
+                  className="w-full px-4 py-3 text-left text-xs font-bold uppercase tracking-widest text-slate-300 hover:text-pink-300 hover:bg-pink-500/20 transition-colors flex items-center gap-3 cursor-pointer"
                 >
-                  <Palette className="w-4 h-4 text-pink-600" />
+                  <Palette className="w-4 h-4 text-pink-400" />
                   Shared Doodle
                 </button>
               </motion.div>
@@ -145,7 +145,7 @@ export function ChatHeader({
         {!isDirectChat && (
           <button
             onClick={onSkipChat}
-            className="flex items-center gap-2 px-3 sm:px-4 py-2 bg-white hover:bg-slate-100 rounded-xl transition-all text-[10px] sm:text-xs font-bold uppercase tracking-widest text-slate-600 hover:text-slate-800 border-2 border-slate-200 cursor-pointer shadow-sm"
+            className="flex items-center gap-2 px-3 sm:px-4 py-2 bg-slate-700/50 hover:bg-slate-700/70 rounded-xl transition-all text-[10px] sm:text-xs font-bold uppercase tracking-widest text-slate-300 hover:text-slate-100 border-2 border-slate-600/30 cursor-pointer shadow-sm"
           >
             <SkipForward className="w-3.5 h-3.5 sm:w-4 h-4" />
             <span className="hidden sm:inline">Next</span>
@@ -154,7 +154,7 @@ export function ChatHeader({
         {!isDirectChat && (
           <button
             onClick={onStopChat}
-            className="p-2 sm:p-2.5 bg-gradient-to-r from-pink-100 to-rose-100 hover:from-pink-200 hover:to-rose-200 rounded-xl transition-all text-pink-700 border-2 border-pink-300 cursor-pointer shadow-sm"
+            className="p-2 sm:p-2.5 bg-gradient-to-r from-pink-600/40 to-rose-600/40 hover:from-pink-600/60 hover:to-rose-600/60 rounded-xl transition-all text-pink-200 border-2 border-pink-500/30 cursor-pointer shadow-sm"
           >
             <LogOut className="w-4 h-4 sm:w-5 h-5" />
           </button>
