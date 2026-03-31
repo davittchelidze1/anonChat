@@ -8,9 +8,9 @@
 @layer base {
   html, body {
     @apply antialiased overflow-hidden fixed inset-0;
-    /* Vibrant soft gradient background - light theme with subtle color */
-    background: linear-gradient(135deg, #f8f9ff 0%, #fff5f7 50%, #f0f9ff 100%);
-    color: #1e293b;
+    /* Warm, cozy dark gradient - pleasant for long usage */
+    background: linear-gradient(135deg, #1e1b4b 0%, #312e81 25%, #4c1d95 50%, #581c87 75%, #3b1f47 100%);
+    color: #e2e8f0;
     height: 100dvh;
     width: 100vw;
     -webkit-tap-highlight-color: transparent;
@@ -35,8 +35,8 @@
 }
 
 .glass {
-  @apply bg-white/90 backdrop-blur-lg border border-purple-100/50;
-  box-shadow: 0 8px 32px rgba(139, 92, 246, 0.1);
+  @apply bg-slate-900/60 backdrop-blur-lg border border-purple-400/20;
+  box-shadow: 0 8px 32px rgba(139, 92, 246, 0.15);
 }
 
 .message-bubble {
@@ -45,16 +45,16 @@
 }
 
 .message-mine {
-  background: linear-gradient(135deg, #8b5cf6 0%, #6366f1 100%);
+  background: linear-gradient(135deg, #6366f1 0%, #7c3aed 100%);
   @apply text-white self-end rounded-br-none;
-  box-shadow: 0 4px 16px rgba(139, 92, 246, 0.35);
+  box-shadow: 0 4px 16px rgba(99, 102, 241, 0.25);
 }
 
 .message-partner {
-  background: linear-gradient(135deg, #f1f5f9 0%, #e2e8f0 100%);
-  @apply text-slate-800 self-start rounded-bl-none;
-  box-shadow: 0 2px 12px rgba(100, 116, 139, 0.15);
-  border: 1px solid #cbd5e1;
+  background: linear-gradient(135deg, #334155 0%, #475569 100%);
+  @apply text-slate-100 self-start rounded-bl-none;
+  box-shadow: 0 2px 12px rgba(51, 65, 85, 0.4);
+  border: 1px solid #475569;
 }
 
 @keyframes pulse-slow {
@@ -99,21 +99,21 @@ button, a, input, textarea {
   transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
-/* Improved focus states with vibrant colors */
+/* Improved focus states with softer colors */
 input:focus, textarea:focus {
   outline: none;
-  box-shadow: 0 0 0 2px rgba(139, 92, 246, 0.15), 0 0 0 4px rgba(139, 92, 246, 0.4);
+  box-shadow: 0 0 0 2px rgba(124, 58, 237, 0.15), 0 0 0 4px rgba(124, 58, 237, 0.3);
 }
 
-/* Additional vibrant utility classes */
+/* Softer vibrant utility classes for comfortable long usage */
 .gradient-primary {
-  background: linear-gradient(135deg, #8b5cf6 0%, #ec4899 100%);
+  background: linear-gradient(135deg, #7c3aed 0%, #d946ef 100%);
 }
 
 .gradient-secondary {
-  background: linear-gradient(135deg, #06b6d4 0%, #3b82f6 100%);
+  background: linear-gradient(135deg, #0ea5e9 0%, #6366f1 100%);
 }
 
 .gradient-accent {
-  background: linear-gradient(135deg, #f59e0b 0%, #ef4444 100%);
+  background: linear-gradient(135deg, #f59e0b 0%, #f97316 100%);
 }

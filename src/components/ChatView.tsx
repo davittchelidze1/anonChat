@@ -93,7 +93,7 @@ export function ChatView({
       initial={{ opacity: 0, scale: 0.98 }}
       animate={{ opacity: 1, scale: 1 }}
       exit={{ opacity: 0, scale: 1.02 }}
-      className="flex flex-col h-[100dvh] max-w-7xl mx-auto border-x border-white/5 bg-zinc-950 shadow-2xl overflow-hidden"
+      className="flex flex-col h-[100dvh] max-w-7xl mx-auto border-x border-purple-500/10 bg-slate-950/30 shadow-2xl overflow-hidden"
     >
       <MiniGames
         gameState={gameState}
