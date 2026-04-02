@@ -11,7 +11,6 @@ import { MessageAnalysis, MessageContext, UserModerationHistory } from '../types
  */
 export class MessageAnalysisService {
   private genai: GoogleGenAI | null = null;
-  private model: any = null;
   private userHistory: Map<string, UserModerationHistory> = new Map();
   private isEnabled: boolean = false;
 
@@ -21,13 +20,6 @@ export class MessageAnalysisService {
     if (apiKey && apiKey !== 'MY_GEMINI_API_KEY') {
       try {
         this.genai = new GoogleGenAI({ apiKey });
-        this.model = this.genai.getGenerativeModel({
-          model: 'gemini-2.0-flash-exp',
-          generationConfig: {
-            temperature: 0.1, // Low temperature for consistent moderation
-            maxOutputTokens: 256,
-          }
-        });
         this.isEnabled = true;
         console.log('Message Analysis Service initialized with Gemini AI');
       } catch (error) {
@@ -52,7 +44,7 @@ export class MessageAnalysisService {
    */
   public async analyzeMessage(context: MessageContext): Promise<MessageAnalysis> {
     // If service is disabled, return safe result
-    if (!this.isEnabled || !this.model) {
+    if (!this.isEnabled || !this.genai) {
       return this.createSafeResult();
     }
 
@@ -66,9 +58,15 @@ export class MessageAnalysisService {
       const prompt = this.buildAnalysisPrompt(context);
 
       // Call Gemini API
-      const result = await this.model.generateContent(prompt);
-      const response = await result.response;
-      const text = response.text();
+      const result = await this.genai.models.generateContent({
+        model: 'gemini-2.0-flash',
+        contents: prompt,
+        config: {
+          temperature: 0.1, // Low temperature for consistent moderation
+          maxOutputTokens: 256,
+        },
+      });
+      const text = result.text || '';
 
       // Parse JSON response
       const analysis = this.parseAnalysisResponse(text);
