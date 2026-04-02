@@ -29,7 +29,6 @@ server/
 │   ├── socketHandlers.ts        # Original (deprecated)
 │   └── socketHandlersRefactored.ts  # New refactored version
 ├── types/
-│   ├── messageAnalysis.ts
 │   └── socketEvents.ts          # Type-safe socket event definitions
 ├── utils/
 │   ├── logger.ts                # Structured logging utility

@@ -294,12 +294,6 @@ The AnonChat application is a functional anonymous chat platform with friend fea
 - Improve error handling
 - Add logging
 
-**server/services/messageAnalysisService.ts**
-- Add caching for repeated messages
-- Improve prompt engineering
-- Add configurable thresholds
-- Better error recovery
-
 ### Client Files
 
 **src/App.tsx**

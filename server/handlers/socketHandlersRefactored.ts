@@ -7,8 +7,6 @@ import { Server, Socket } from 'socket.io';
 import type { Firestore } from 'firebase-admin/firestore';
 import { Filter } from 'bad-words';
 import { StateManager } from '../core/StateManager';
-import { getMessageAnalysisService } from '../services/messageAnalysisService';
-import { MessageContext } from '../types/messageAnalysis';
 import { CLIENT_EVENTS, SERVER_EVENTS } from '../types/socketEvents';
 
 /**
@@ -22,7 +20,6 @@ import { CLIENT_EVENTS, SERVER_EVENTS } from '../types/socketEvents';
  */
 export class SocketHandlers {
   private filter: Filter;
-  private analysisService: ReturnType<typeof getMessageAnalysisService>;
 
   constructor(
     private io: Server,
@@ -31,7 +28,6 @@ export class SocketHandlers {
     private firestore: Firestore | null
   ) {
     this.filter = new Filter();
-    this.analysisService = getMessageAnalysisService();
   }
 
   // ============================================================================
@@ -282,66 +278,6 @@ export class SocketHandlers {
           if (text) cleanText = this.filter.clean(text);
         } catch (e) {
           // If filter fails, use original text
-        }
-
-        // Analyze message for harmful content
-        if (this.analysisService.isServiceEnabled() && text && text.trim().length > 0) {
-          try {
-            const userId = this.stateManager.getUserId(socket.id);
-            const context: MessageContext = {
-              text: cleanText,
-              senderId: userId,
-              messageId,
-              timestamp: new Date().toISOString(),
-              sessionContext: {
-                partnerId: this.stateManager.getUserId(chat.partnerSocketId),
-              },
-            };
-
-            const analysis = await this.analysisService.analyzeMessage(context);
-
-            // Handle based on action
-            if (analysis.action === 'block') {
-              socket.emit(SERVER_EVENTS.MESSAGE_BLOCKED, {
-                messageId,
-                reason: analysis.reason,
-                severity: analysis.severity,
-              });
-              console.log(
-                `[SocketHandlers] Message blocked: ${messageId} - ${analysis.reason} (severity: ${analysis.severity})`
-              );
-              return;
-            } else if (analysis.action === 'warn') {
-              socket.emit(SERVER_EVENTS.MESSAGE_WARNING, {
-                messageId,
-                reason: analysis.reason,
-                severity: analysis.severity,
-              });
-              console.log(
-                `[SocketHandlers] Message warned: ${messageId} - ${analysis.reason} (severity: ${analysis.severity})`
-              );
-            } else if (analysis.action === 'flag') {
-              console.log(
-                `[SocketHandlers] Message flagged: ${messageId} - ${analysis.reason} (severity: ${analysis.severity})`
-              );
-            }
-
-            // Log analysis result
-            if (analysis.action !== 'allow') {
-              console.log('[SocketHandlers] Message Analysis:', {
-                messageId,
-                userId,
-                severity: analysis.severity,
-                label: analysis.label,
-                category: analysis.category,
-                action: analysis.action,
-                reason: analysis.reason,
-              });
-            }
-          } catch (error) {
-            console.error('[SocketHandlers] Message analysis error:', error);
-            // On error, allow message to go through
-          }
         }
 
         // Send message to partner
