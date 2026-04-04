@@ -87,18 +87,6 @@ export interface ReceiveMessageEvent {
   timestamp: string;
 }
 
-export interface MessageBlockedEvent {
-  messageId: string;
-  reason: string;
-  severity: number;
-}
-
-export interface MessageWarningEvent {
-  messageId: string;
-  reason: string;
-  severity: number;
-}
-
 export interface PartnerTypingEvent {
   isTyping: boolean;
 }
@@ -204,8 +192,6 @@ export const SERVER_EVENTS = {
   MATCHED: 'matched',
   PARTNER_DISCONNECTED: 'partner-disconnected',
   RECEIVE_MESSAGE: 'receive-message',
-  MESSAGE_BLOCKED: 'message-blocked',
-  MESSAGE_WARNING: 'message-warning',
   PARTNER_TYPING: 'partner-typing',
   PARTNER_MESSAGE_VIEWED: 'partner-message-viewed',
   PARTNER_MESSAGE_REACTION: 'partner-message-reaction',
@@ -236,8 +222,6 @@ export interface ServerToClientEvents {
   [SERVER_EVENTS.MATCHED]: (data: MatchedEvent) => void;
   [SERVER_EVENTS.PARTNER_DISCONNECTED]: () => void;
   [SERVER_EVENTS.RECEIVE_MESSAGE]: (data: ReceiveMessageEvent) => void;
-  [SERVER_EVENTS.MESSAGE_BLOCKED]: (data: MessageBlockedEvent) => void;
-  [SERVER_EVENTS.MESSAGE_WARNING]: (data: MessageWarningEvent) => void;
   [SERVER_EVENTS.PARTNER_TYPING]: (isTyping: boolean) => void;
   [SERVER_EVENTS.PARTNER_MESSAGE_VIEWED]: (messageId: string) => void;
   [SERVER_EVENTS.PARTNER_MESSAGE_REACTION]: (data: PartnerMessageReactionEvent) => void;

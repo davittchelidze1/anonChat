@@ -23,24 +23,11 @@ View your app in AI Studio: https://ai.studio/apps/bcf85a1e-6f7b-4661-b260-7e07e
 
 **Status**: ✅ Production ready, backward compatible, no breaking changes
 
-## Features
-
-### 🛡️ AI-Powered Message Moderation
-Real-time message analysis and classification system powered by Google Gemini AI. Automatically detects and handles:
-- Toxicity (insults, harassment, hate speech)
-- Sexual content (explicit, suggestive)
-- Spam and bot-like behavior
-- Threats and harmful intent
-
-See [MESSAGE_ANALYSIS.md](MESSAGE_ANALYSIS.md) for detailed documentation.
-
 ## Run Locally
 
 **Prerequisites:**  Node.js
 
-
 1. Install dependencies:
    `npm install`
-2. Set the `GEMINI_API_KEY` in [.env.local](.env.local) to your Gemini API key
-3. Run the app:
+2. Run the app:
    `npm run dev`
